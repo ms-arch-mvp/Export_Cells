@@ -7,7 +7,7 @@
   <a href="https://youtu.be/KWqIz32oWKQ">Video</a>
 </p>
 
-Export Cells is an MWSE mod that exports cells for visualisation, editing and testing. It includes a suite of functions to enable versatile exports.
+Export Cells is an MWSE mod that exports cells for visualisation, editing and testing. It is the foundation of the [Morrowind Visualisation Project](https://ms-arch.gitbook.io/morrowind-visualisation-project/) and includes a suite of functions to enable versatile exports.
 
 Export Cells is based on [Export Sphere](https://morrowind-modding.github.io/modding-tools/3d-modeling-tools/export-sphere) and works in conjunction.
 
