@@ -1,0 +1,330 @@
+local export = {}
+
+local teleport = require("ExportCells.infrastructure.teleport")
+local grid = require("ExportCells.infrastructure.grid")
+local utils = require("ExportCells.utils")
+local ui = require("ExportCells.ui")
+local jsonModule = require("ExportCells.modules.jsons")
+local reportsModule = require("ExportCells.modules.reports")
+local interiorsModule = require("ExportCells.modules.interiors")
+local nifsModule = require("ExportCells.modules.nifs")
+local objectsModule = require("ExportCells.modules.objects")
+local characterModule = require("ExportCells.modules.character")
+
+local config = nil
+local exportCancelRequestedRef = { [1] = false }
+local exportInProgress = false
+local exportReturnPos = nil
+local exportReturnCell = nil
+
+function export.setConfig(cfg)
+    config = cfg
+    utils.setConfig(cfg)
+    grid.setConfig(cfg)
+    teleport.setConfig(cfg)
+    jsonModule.setConfig(cfg)
+    reportsModule.setConfig(cfg)
+    interiorsModule.setConfig(cfg)
+    nifsModule.setConfig(cfg)
+    objectsModule.setConfig(cfg)
+    characterModule.setConfig(cfg)
+end
+
+function export.setCancelRef(ref)
+    exportCancelRequestedRef = ref or exportCancelRequestedRef
+    teleport.setCancelRef(exportCancelRequestedRef)
+    interiorsModule.setCancelRef(exportCancelRequestedRef)
+    objectsModule.setCancelRef(exportCancelRequestedRef)
+end
+
+-- =============================================================================
+-- EXPORT LOGIC & ORCHESTRATION
+-- =============================================================================
+local exportActiveCells, export2x2, export3x3
+
+-- Delegate the core export to nifsModule
+local function exportCells(regionCells, exportMode, currentIndex, totalCount)
+    nifsModule.export(regionCells, exportMode, currentIndex, totalCount)
+end
+
+-- Orchestration functions
+exportActiveCells = function(exportMode, currentIndex, totalCount)
+    exportMode = exportMode or config.defaultExportModes["active"]
+    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    local activeCells = tes3.getActiveCells()
+    exportCells(activeCells, exportMode, currentIndex, totalCount)
+end
+
+export2x2 = function(exportMode, currentIndex, totalCount)
+    exportMode = exportMode or config.defaultExportModes["2x2"]
+    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    local activeCells = tes3.getActiveCells()
+    local regionCells = {}
+
+    if not tes3.player.cell.isInterior then
+        local cell = tes3.player.cell
+        local startX, startY = cell.gridX, cell.gridY
+        for dx = 0, 1 do
+            for dy = 0, -1, -1 do
+                local x, y = startX + dx, startY + dy
+                local c = tes3.getCell({ x = x, y = y })
+                if c then table.insert(regionCells, c) end
+            end
+        end
+    else
+        regionCells = activeCells
+    end
+    exportCells(regionCells, exportMode, currentIndex, totalCount)
+end
+
+export3x3 = function(exportMode, currentIndex, totalCount)
+    exportMode = exportMode or config.defaultExportModes["3x3"]
+    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    local activeCells = tes3.getActiveCells()
+    exportCells(activeCells, exportMode, currentIndex, totalCount)
+end
+
+-- Wire up interiors to use these orchestrators
+interiorsModule.setExportActiveCellsRef(exportActiveCells)
+interiorsModule.onComplete = function(cancelled, singleCell, gridType)
+    -- This matches the finishExport logic in exportGridWithSize
+    exportInProgress = false
+    exportCancelRequestedRef[1] = false
+    if not singleCell and exportReturnPos and exportReturnCell then
+        tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell }
+    end
+    utils.restoreExportConsoleToggles()
+    local exportMode = config.defaultExportModes[gridType] or config.defaultExportModes["active"]
+    if cancelled then
+        tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export cancelled. Returned to starting cell.", "Traversal cancelled. Returned to starting cell."))
+    elseif singleCell then
+        tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export completed.", "Traversal completed."))
+    else
+        tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export completed. Returned to starting cell.", "Traversal completed. Returned to starting cell."))
+    end
+end
+
+-- =============================================================================
+-- GRID EXPORT CONTROLLER
+-- =============================================================================
+function export.exportGridWithSize(size, gridType)
+    utils.setupExportConsoleToggles()
+    local cell = tes3.player.cell
+    local exportMode = config.defaultExportModes[gridType]
+
+    if cell.isInterior then
+        exportReturnPos = tes3.player.position:copy()
+        exportReturnCell = cell
+        exportInProgress = true
+        interiorsModule.exportInteriorsFromSameMod(gridType)
+        return
+    end
+
+    local startX, startY = cell.gridX, cell.gridY
+    exportReturnPos = tes3.player.position:copy()
+    exportReturnCell = cell
+
+    local sequence = {}
+    local offsets = {}
+    if gridType == "3x3" then offsets = grid.get3x3GridOffsets(size)
+    elseif gridType == "2x2" then offsets = grid.get2x2GridOffsets(size)
+    else offsets = grid.get1x1GridOffsets(size) end
+
+    for _, offset in ipairs(offsets) do
+        table.insert(sequence, { x = startX + offset.x, y = startY + offset.y })
+    end
+
+    exportInProgress = true
+    exportCancelRequestedRef[1] = false
+
+    local function finishExport(cancelled)
+        exportInProgress = false
+        exportCancelRequestedRef[1] = false
+        if exportReturnPos and exportReturnCell then
+            tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell, suppressFader = true }
+        end
+        utils.restoreExportConsoleToggles()
+        if cancelled then
+            tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export cancelled.", "Traversal cancelled."))
+        else
+            tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export completed.", "Traversal completed."))
+        end
+    end
+
+    local function processNextCell(index)
+        if exportCancelRequestedRef[1] then finishExport(true); return end
+        if index > #sequence then finishExport(false); return end
+        local coord = sequence[index]
+        teleport.tryTeleportToCell(coord.x, coord.y, tes3.player.position.z, function()
+            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+                if exportCancelRequestedRef[1] then finishExport(true); return end
+                if gridType == "3x3" then
+                    export3x3(exportMode, index, #sequence)
+                elseif gridType == "2x2" then
+                    export2x2(exportMode, index, #sequence)
+                else
+                    exportActiveCells(exportMode, index, #sequence)
+                end
+                timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processNextCell(index + 1) end })
+            end })
+        end)
+    end
+
+    tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Starting %s export (%dx%d grid)", "Starting %s traversal (%dx%d grid)"), gridType, size, size)
+    timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processNextCell(1) end })
+end
+
+-- =============================================================================
+-- LANDMASS EXPORT CONTROLLER
+-- =============================================================================
+function export.exportLandmassGrid(gridType)
+    utils.setupExportConsoleToggles()
+    if exportInProgress then return end
+
+    local extents = utils.getLandmassExtents()
+    if not extents then return end
+
+    local anchors = grid.getGridAnchors(gridType, extents.minX, extents.maxX, extents.minY, extents.maxY, extents.visited)
+    local exportMode = config.defaultExportModes[gridType]
+
+    exportReturnPos = tes3.player.position:copy()
+    exportReturnCell = tes3.player.cell
+    exportInProgress = true
+    exportCancelRequestedRef[1] = false
+
+    local function finishExport(cancelled)
+        exportInProgress = false
+        exportCancelRequestedRef[1] = false
+        if exportReturnPos and exportReturnCell then
+            tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell }
+        end
+        utils.restoreExportConsoleToggles()
+        tes3.messageBox(utils.traversalOrExportMsg(exportMode,
+            cancelled and "Landmass export cancelled." or "Landmass export completed.",
+            cancelled and "Landmass traversal cancelled." or "Landmass traversal completed."))
+    end
+
+    local function processAnchor(index)
+        if exportCancelRequestedRef[1] then finishExport(true); return end
+        if index > #anchors then finishExport(false); return end
+        local anchor = anchors[index]
+        teleport.tryTeleportToCell(anchor.x, anchor.y, tes3.player.position.z, function()
+            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+                if exportCancelRequestedRef[1] then finishExport(true); return end
+
+                local regionCells = {}
+                local step = (gridType == "2x2") and 1 or 1 -- anchors are already grid-aware
+                if gridType == "2x2" then
+                    for dx = 0, 1 do for dy = 0, 1 do
+                        local c = tes3.getCell({x = anchor.x + dx, y = anchor.y + dy})
+                        if c then table.insert(regionCells, c) end
+                    end end
+                else
+                    for dx = -1, 1 do for dy = -1, 1 do
+                        local c = tes3.getCell({x = anchor.x + dx, y = anchor.y + dy})
+                        if c then table.insert(regionCells, c) end
+                    end end
+                end
+
+                exportCells(regionCells, exportMode, index, #anchors)
+                timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processAnchor(index + 1) end })
+            end })
+        end)
+    end
+
+    processAnchor(1)
+end
+
+-- =============================================================================
+-- PUBLIC API
+-- =============================================================================
+function export.getLandmassReport() reportsModule.getLandmassReport() end
+function export.getInteriorReport() reportsModule.getInteriorReport() end
+function export.exportInteriorsFromSameMod(gridType)
+    utils.setupExportConsoleToggles()
+    exportReturnPos = tes3.player.position:copy()
+    exportReturnCell = tes3.player.cell
+    exportInProgress = true
+    exportCancelRequestedRef[1] = false
+    interiorsModule.exportInteriorsFromSameMod(gridType)
+end
+
+-- Misc
+function export.isInProgress() 
+    return exportInProgress or objectsModule.isInProgress()
+end
+function export.exportObjectsByMeshFolder(folder)
+    if folder then
+        objectsModule.exportObjectsByMeshFolder(folder)
+    else
+        ui.createMeshFolderInputDialog({
+            onConfirm = function(folderInput)
+                if string.find(string.lower(folderInput), "%.esp$") or string.find(string.lower(folderInput), "%.esm$") then
+                    local objs = objectsModule.collectByMod(folderInput)
+                    if objs and #objs > 0 then
+                        local map = { ["Mod_" .. folderInput] = objs }
+                        objectsModule.exportObjectsByMeshFolder({ "Mod_" .. folderInput }, map)
+                    else
+                        tes3.messageBox("No objects found for mod: %s", folderInput)
+                    end
+                else
+                    local f, groups = objectsModule.discoverFolders(folderInput)
+                    if f and #f > 0 then
+                        objectsModule.exportObjectsByMeshFolder(f, groups)
+                    else
+                        tes3.messageBox("No matching folders found.")
+                    end
+                end
+            end,
+            onFlagged = function()
+                local objs = objectsModule.collectFlagged()
+                if objs and #objs > 0 then
+                    local map = { ["Flagged"] = objs }
+                    objectsModule.exportObjectsByMeshFolder({"Flagged"}, map)
+                else
+                    tes3.messageBox("No matching objects found in flagged file.")
+                end
+            end,
+            onAllFolders = function(resumeFolder)
+                objectsModule.exportLists()
+                local folders, groups = objectsModule.discoverFolders()
+                if folders and #folders > 0 then
+                    if resumeFolder and resumeFolder ~= "" then
+                        local queued = {}
+                        local found = false
+                        for _, f in ipairs(folders) do
+                            if found or f == resumeFolder then
+                                found = true
+                                table.insert(queued, f)
+                            end
+                        end
+                        if found then
+                            objectsModule.exportObjectsByMeshFolder(queued, groups)
+                        else
+                            tes3.messageBox("Folder '%s' not found. Exporting all.", resumeFolder)
+                            objectsModule.exportObjectsByMeshFolder(folders, groups)
+                        end
+                    else
+                        objectsModule.exportObjectsByMeshFolder(folders, groups)
+                    end
+                else
+                    tes3.messageBox("No mesh folders found.")
+                end
+            end,
+            onCancel = function()
+                tes3.messageBox("Export cancelled.")
+            end
+        })
+    end
+end-- Public API
+export.exportCells = exportCells
+export.export2x2 = export2x2
+export.export3x3 = export3x3
+export.exportActiveCells = exportActiveCells
+
+function export.exportCharacter()
+    local ref = tes3.getPlayerTarget()
+    characterModule.export(ref)
+end
+
+return export
