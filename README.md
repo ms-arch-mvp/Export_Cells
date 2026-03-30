@@ -21,4 +21,4 @@ Export Cells is based on [Export Sphere](https://morrowind-modding.github.io/mod
 ### Installation
 * Get the download from the releases page and install as a mod.
 * Overwrite MWSE.dll in the game directory if you want to use character export functions. MWSE.dll has ben provided by [Greatness7](https://github.com/Greatness7) ands adds the method shape:applySkinDeform()
-* Install io_scene_mw_mvp if you want to import into Blender.
+* Install io_scene_mw_mvp if you want to import into Blender, with ignore_armatures and ignore_animations enabled to prevent issues.
