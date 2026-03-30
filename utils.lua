@@ -277,12 +277,17 @@ end
 function utils.filterBestLOD(node)
     if not node then return end
     if node:isInstanceOfType(tes3.niType.NiLODNode) then
-        if node.children and #node.children > 0 then
-            for i = #node.children, 2, -1 do
-                node:detachChildAt(i)
+        if node.children then
+            local niNodeCount = 0
+            for _, child in ipairs(node.children) do
+                if child and child:isInstanceOfType(tes3.niType.NiNode) then
+                    niNodeCount = niNodeCount + 1
+                end
             end
-            if node.children[1] then
-                utils.filterBestLOD(node.children[1])
+            if niNodeCount >= 2 then
+                for i = #node.children, 2, -1 do
+                    node:detachChildAt(i)
+                end
             end
         end
     elseif node.children then
