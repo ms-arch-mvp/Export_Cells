@@ -23,7 +23,6 @@ function characters.export(ref)
         return
     end
 
-    local objId = (ref.baseObject.id or "unknown"):gsub("%x%x%x%x%x%x%x%x$", "")
     local exportDir = config and config.exportFolder or "Data Files/Export Cells/"
     local fileName = ("%s.nif"):format(ref.baseObject.id)
     local fullPath = exportDir .. "\\" .. fileName
