@@ -1,6 +1,7 @@
 local interiors = {}
 
 local config = nil
+local constants = require("ExportCells.constants")
 local exportCancelRequestedRef = nil
 local teleport = require("ExportCells.infrastructure.teleport")
 local utils = require("ExportCells.utils")
@@ -27,21 +28,19 @@ end
 function interiors.exportInteriorsFromSameMod(gridType)
     gridType = gridType or "active"
 
-    if not config or not config.EXPORT_MODE then
+    if not config then
         tes3.messageBox("Export initialization error: configuration missing.")
         return
     end
 
-    local exportMode = config.defaultExportModes and config.defaultExportModes[gridType] or config.EXPORT_MODE.EVERYTHING
+    local exportMode = config.defaultExportModes and config.defaultExportModes[gridType] or constants.EXPORT_MODE.EVERYTHING
 
-    -- For interiors, preserve PROXY/JSON mode if selected, otherwise fallback to EVERYTHING
-    local interiorExportMode = config.EXPORT_MODE.EVERYTHING
-    if exportMode == config.EXPORT_MODE.DISABLED then
-        interiorExportMode = config.EXPORT_MODE.DISABLED
-    elseif exportMode == config.EXPORT_MODE.PROXY then
-        interiorExportMode = config.EXPORT_MODE.PROXY
-    elseif exportMode == config.EXPORT_MODE.JSON then
-        interiorExportMode = config.EXPORT_MODE.JSON
+    -- For interiors, preserve JSON mode if selected, otherwise fallback to EVERYTHING
+    local interiorExportMode = constants.EXPORT_MODE.EVERYTHING
+    if exportMode == constants.EXPORT_MODE.DISABLED then
+        interiorExportMode = constants.EXPORT_MODE.DISABLED
+    elseif exportMode == constants.EXPORT_MODE.JSON then
+        interiorExportMode = constants.EXPORT_MODE.JSON
     end
 
     local cell = tes3.player.cell
@@ -117,7 +116,7 @@ function interiors.exportInteriorsFromSameMod(gridType)
         for _, id in ipairs(cellNames) do table.insert(exportList, id) end
         table.sort(exportList)
 
-        local exportFolder = config.EXPORT_FOLDER and config.EXPORT_FOLDER:gsub("[\\/]$", "") or ""
+        local exportFolder = config.exportFolder and config.exportFolder:gsub("[\\/]$", "") or ""
         if exportFolder ~= "" then lfs.mkdir(exportFolder) end
         local safeModName = (modName or "mod"):gsub("[\\/:*?\"<>|]", "_")
         local fileName = string.format("%s interiors.txt", safeModName)
@@ -142,7 +141,7 @@ function interiors.exportInteriorsFromSameMod(gridType)
         string.format("Starting interior traversal for mod: %s (%d cells) | Press SPACE to cancel", modName, totalCount)))
 
     -- Export starting cell
-    if interiorExportMode ~= config.EXPORT_MODE.DISABLED then
+    if interiorExportMode ~= constants.EXPORT_MODE.DISABLED then
         if exportActiveCellsRef then exportActiveCellsRef(interiorExportMode, 1, totalCount) end
     else
         tes3.messageBox(utils.traversalOrExportMsg(interiorExportMode, "", string.format("Traversed to starting cell: %s (1 of %d)", startId, totalCount)))
@@ -150,7 +149,7 @@ function interiors.exportInteriorsFromSameMod(gridType)
 
     -- If this was the only interior, finish immediately (no return teleport needed)
     if #targets == 0 then
-        timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() finishExport(false, true) end })
+        timer.start({ duration = config.teleportDelaySeconds, callback = function() finishExport(false, true) end })
         return
     end
 
@@ -167,20 +166,20 @@ function interiors.exportInteriorsFromSameMod(gridType)
 
         tes3.runLegacyScript{ command = cmd }
 
-        timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+        timer.start({ duration = config.teleportDelaySeconds, callback = function()
             if exportCancelRequestedRef[1] then finishExport(true); return end
-            if interiorExportMode ~= config.EXPORT_MODE.DISABLED then
+            if interiorExportMode ~= constants.EXPORT_MODE.DISABLED then
                 if exportActiveCellsRef then exportActiveCellsRef(interiorExportMode, index + 1, totalCount) end
             else
                 tes3.messageBox(utils.traversalOrExportMsg(interiorExportMode, "", string.format("Traversed to: %s (%d of %d)", targetId, index + 1, totalCount)))
             end
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 processNext(index + 1)
             end })
         end })
     end
 
-    timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processNext(1) end })
+    timer.start({ duration = config.teleportDelaySeconds, callback = function() processNext(1) end })
 end
 
 return interiors

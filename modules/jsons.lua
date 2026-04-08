@@ -1,4 +1,6 @@
 local jsons = {}
+
+local constants = require("ExportCells.constants")
 local utils = require("ExportCells.utils")
 
 local config = nil
@@ -67,7 +69,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
     end
 
     local suffix = ""
-    local path = string.format("%s\\%s%s%s.json", config.EXPORT_FOLDER, coords, cellName, suffix)
+    local path = string.format("%s\\%s%s%s.json", config.exportFolder, coords, cellName, suffix)
 
     -- ---- Root cell empty ----
     local rootName = coords .. cellName .. suffix
@@ -135,7 +137,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 local objId    = obj.id
                 local objType  = obj.objectType
                 local isLight  = (objType == tes3.objectType.light)
-                local typeName = config.objectTypeNames and config.objectTypeNames[objType] or tostring(objType)
+                local typeName = constants.objectTypeNames and constants.objectTypeNames[objType] or tostring(objType)
                 local relMesh = utils.getRelativeMeshPath(meshPath)
 
                 idCounters[objId] = (idCounters[objId] or 0) + 1
@@ -147,14 +149,26 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     instName = count == 1 and objId or string.format("%s (%s)", objId, tostring(ref):match("0x(%w+)"))
                 end
 
-                local extra = {
-                    "    " .. jsonString("object_id")      .. ": " .. jsonString(objId) .. ",",
-                    "    " .. jsonString("source_mod")     .. ": " .. jsonString(ref.sourceMod or "") .. ",",
-                    "    " .. jsonString("morrowind_type") .. ": " .. jsonString(typeName),
+                local fieldMap = {
+                    object_id      = function() return jsonString(objId) end,
+                    source_form_id = function() return jsonNumber(ref.sourceFormId or 0) end,
+                    source_mod_id  = function() return jsonNumber(ref.sourceModId or 0) end,
+                    source_mod     = function() return jsonString(ref.sourceMod or "") end,
+                    morrowind_type = function() return jsonString(typeName) end,
+                    mesh           = function() return relMesh and jsonString(relMesh) end,
                 }
-                if relMesh then
-                    table.insert(extra, 3, "    " .. jsonString("mesh") .. ": " .. jsonString(relMesh) .. ",")
+                
+                local fieldLines = {}
+                for _, field in ipairs(config.jsonFields or {}) do
+                    local handler = fieldMap[field]
+                    if handler then
+                        local val = handler()
+                        if val then
+                            table.insert(fieldLines, string.format("    %s: %s,", jsonString(field), val))
+                        end
+                    end
                 end
+
                 if isLight and obj.color and obj.radius then
                     local r = (obj.color[1] or 0) / 255
                     local g = (obj.color[2] or 0) / 255
@@ -169,7 +183,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                         "      " .. jsonString("pulse_slow")   .. ": " .. tostring(obj.pulseSlow     and true or false),
                         "    }"
                     }, "\n    ")
-                    table.insert(extra, #extra, "    " .. jsonString("light_data") .. ": " .. lightJson .. ",")
+                    table.insert(fieldLines, #fieldLines, "    " .. jsonString("light_data") .. ": " .. lightJson .. ",")
                 end
 
                 local cloned = ref.sceneNode:clone()
@@ -191,7 +205,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     rootTransform = { translation = wt.translation, rotation = wt.rotation, scale = cloned.scale or 1 }
                 end
 
-                emitEntry(instName, rootName, rootTransform, "EMPTY", extra)
+                emitEntry(instName, rootName, rootTransform, "EMPTY", fieldLines)
 
                 -- Non-light instances: no child nodes are used by the importer, skip traversal.
                 if config.jsonLightChildNodesOnly and not isLight then goto continue end
@@ -257,7 +271,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     local jsonType = nil
                     if node:isInstanceOfType(tes3.niType.NiPointLight) or
                        node:isInstanceOfType(tes3.niType.NiSpotLight) then
-                        jsonType = config.jsonNodeTypes[tes3.niType.NiPointLight] or "LIGHT"
+                        jsonType = constants.jsonNodeTypes[tes3.niType.NiPointLight] or "LIGHT"
                         local cr = node.diffuse and node.diffuse.r or 1
                         local cg = node.diffuse and node.diffuse.g or 1
                         local cb = node.diffuse and node.diffuse.b or 1
@@ -273,7 +287,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                         }, "\n    ")
                         emitLightEntry(nodeName, parentJsonName, lt, lightJson, jsonType)
                     elseif node:isInstanceOfType(tes3.niType.NiNode) then
-                        jsonType = config.jsonNodeTypes[tes3.niType.NiNode] or "EMPTY"
+                        jsonType = constants.jsonNodeTypes[tes3.niType.NiNode] or "EMPTY"
                         local meshScale = nil
                         if node.children then
                             for _, child in ipairs(node.children) do
@@ -290,10 +304,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                         emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
                     elseif node:isInstanceOfType(tes3.niType.NiTriShape) or
                            node:isInstanceOfType(tes3.niType.NiTriStrips) then
-                        jsonType = config.jsonNodeTypes[tes3.niType.NiTriShape] or "EMPTY"
-                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
-                    elseif node:isInstanceOfType(tes3.niType.niParticles) then
-                        jsonType = config.jsonNodeTypes[tes3.niType.niParticles] or "PARTICLE"
+                        jsonType = constants.jsonNodeTypes[tes3.niType.NiTriShape] or "EMPTY"
                         emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
                     end
 
@@ -304,7 +315,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
         end
     end
 
-    lfs.mkdir(config.EXPORT_FOLDER)
+    lfs.mkdir(config.exportFolder)
     local file, err = io.open(path, "w")
     if not file then
         tes3.messageBox("JSON export failed: %s", err or "unknown error")

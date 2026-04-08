@@ -14,7 +14,7 @@ function teleport.setCancelRef(refTable)
 end
 
 local function getTeleportZ(z)
-    return z + (config.exportConsoleToggles.tcl and config.TCL_TELEPORT_Z_OFFSET or 0)
+    return z + (config.exportConsoleToggles.tcl and config.tclTeleportZOffset or 0)
 end
 
 -- =============================================================================
@@ -59,7 +59,7 @@ local function attemptTeleport(targetX, targetY, attempts, targetZ, finalX, fina
             local nextY = currentY
             if deltaX > 0 then nextX = currentX + 1 elseif deltaX < 0 then nextX = currentX - 1 end
             if deltaY > 0 then nextY = currentY + 1 elseif deltaY < 0 then nextY = currentY - 1 end
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 if exportCancelRequestedRef and exportCancelRequestedRef[1] then
                     if callback then callback(true) end
                     return
@@ -74,7 +74,7 @@ local function attemptTeleport(targetX, targetY, attempts, targetZ, finalX, fina
             local adjY = currentY
             if deltaX > 0 then adjX = currentX + 1 elseif deltaX < 0 then adjX = currentX - 1 end
             if deltaY > 0 then adjY = currentY + 1 elseif deltaY < 0 then adjY = currentY - 1 end
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 if exportCancelRequestedRef and exportCancelRequestedRef[1] then
                     if callback then callback(true) end
                     return
@@ -104,7 +104,7 @@ function teleport.tryTeleportToCell(x, y, z, callback)
         if nx ~= nil and ny ~= nil then
             tes3.messageBox("Target cell %d,%d is empty. Teleporting to nearest populated cell %d,%d first.", x, y, nx, ny)
             tes3.positionCell{ reference = tes3.player, position = tes3vector3.new(nx * 8192 + 4096, ny * 8192 + 4096, getTeleportZ(z)), cell = string.format("%d, %d", nx, ny), suppressFader = true }
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 attemptTeleport(nx, ny, 0, z, x, y, callback)
             end })
             return
@@ -117,7 +117,7 @@ function teleport.tryTeleportToCell(x, y, z, callback)
             if lx ~= nil and ly ~= nil then
                 tes3.messageBox("No nearby populated cell. Teleporting to last populated cell along line: %d,%d", lx, ly)
                 tes3.positionCell{ reference = tes3.player, position = tes3vector3.new(lx * 8192 + 4096, ly * 8192 + 4096, getTeleportZ(z)), cell = string.format("%d, %d", lx, ly), suppressFader = true }
-                timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+                timer.start({ duration = config.teleportDelaySeconds, callback = function()
                     attemptTeleport(lx, ly, 0, z, x, y, callback)
                 end })
                 return
@@ -130,7 +130,7 @@ function teleport.tryTeleportToCell(x, y, z, callback)
                 if nx2 ~= nil and ny2 ~= nil then
                     tes3.messageBox("Target cell %d,%d is empty. Teleporting to nearest populated cell %d,%d first.", x, y, nx2, ny2)
                     tes3.positionCell{ reference = tes3.player, position = tes3vector3.new(nx2 * 8192 + 4096, ny2 * 8192 + 4096, getTeleportZ(z)), cell = string.format("%d, %d", nx2, ny2), suppressFader = true }
-                    timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+                    timer.start({ duration = config.teleportDelaySeconds, callback = function()
                         attemptTeleport(nx2, ny2, 0, z, x, y, callback)
                     end })
                     return

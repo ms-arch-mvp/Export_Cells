@@ -1,14 +1,17 @@
-local defaultConfig = require("ExportCells.config")
-local config
+local export = require("ExportCells.export")
 local grid = require("ExportCells.infrastructure.grid")
 local teleport = require("ExportCells.infrastructure.teleport")
-local export = require("ExportCells.export")
-local utils = require("ExportCells.utils")
-local ui = require("ExportCells.ui")
+
 local wearables = require("ExportCells.modules.wearables")
 
+local defaultConfig = require("ExportCells.config")
+local ui = require("ExportCells.ui")
+local utils = require("ExportCells.utils")
+
+local config
+
 -- Load config
-if defaultConfig.USE_SAVED_CONFIG then
+if defaultConfig.useSavedConfig then
     config = mwse.loadConfig("Export Cells", defaultConfig)
 else
     config = defaultConfig
@@ -32,13 +35,20 @@ end)
 -- =============================================================================
 
 local function prompt1x1GridSizeAndExport()
+    local buttonSizes = table.copy(config.gridSizes1x1)
+    local custom = tonumber(config.customGridSize1x1)
+    if custom then table.insert(buttonSizes, custom) end
+
     local exportMode = config.defaultExportModes["1x1"]
     local title = "Select grid of 1x1s" .. ui.getModeText(exportMode)
-    ui.create1x1Menu(title, function(size) export.exportGridWithSize(size, "1x1") end, function() export.exportLandmassGrid("1x1") end)
+    ui.create1x1Menu(buttonSizes, title, function(size) export.exportGridWithSize(size, "1x1") end, function() export.exportLandmassGrid("1x1") end)
 end
 
 local function prompt2x2GridSizeAndExport()
-    local buttonSizes = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 33, 51}
+    local buttonSizes = table.copy(config.gridSizes2x2)
+    local custom = tonumber(config.customGridSize2x2)
+    if custom then table.insert(buttonSizes, custom) end
+
     local exportMode = config.defaultExportModes["2x2"]
     local title = "Select grid of 2x2s" .. ui.getModeText(exportMode)
     ui.createGridSizeMenu("2x2", title, buttonSizes, teleport.moveToNearestMultipleOf2Cell, function()
@@ -49,7 +59,10 @@ local function prompt2x2GridSizeAndExport()
 end
 
 local function prompt3x3GridSizeAndExport()
-    local buttonSizes = {1, 3, 5, 7, 9,  11, 13, 15, 17, 19, 33, 51}
+    local buttonSizes = table.copy(config.gridSizes3x3)
+    local custom = tonumber(config.customGridSize3x3)
+    if custom then table.insert(buttonSizes, custom) end
+
     local exportMode = config.defaultExportModes["3x3"]
     local title = "Select grid of 3x3s" .. ui.getModeText(exportMode)
     ui.createGridSizeMenu("3x3", title, buttonSizes, teleport.moveToNearestMultipleOf3Cell, function()

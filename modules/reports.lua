@@ -1,5 +1,7 @@
 local reports = {}
 
+local constants = require("ExportCells.constants")
+
 local config = nil
 local utils = require("ExportCells.utils")
 local ui = require("ExportCells.ui")
@@ -59,7 +61,7 @@ function reports.getLandmassReport()
 
     local modList = utils.getLandmassMods(visited)
     local filteredMods = {}
-    for _, mod in ipairs(modList) do if not config.vanillaMods[mod] then table.insert(filteredMods, mod) end end
+    for _, mod in ipairs(modList) do if not constants.vanillaMods[mod] then table.insert(filteredMods, mod) end end
 
     local objectTypeCounts = {}
     for _, objType in ipairs(config.exportTypes) do objectTypeCounts[objType] = 0 end
@@ -102,7 +104,7 @@ function reports.getLandmassReport()
     table.insert(reportLines, "")
     table.insert(reportLines, "- OBJECT TYPES IN LANDMASS -")
     table.insert(reportLines, "Counts only placed references")
-    for _, objType in ipairs(config.exportTypes) do local typeName = config.objectTypeNames[objType] or ("Type " .. tostring(objType)); table.insert(reportLines, string.format("%-12s: %d", typeName, objectTypeCounts[objType])) end
+    for _, objType in ipairs(config.exportTypes) do local typeName = constants.objectTypeNames[objType] or ("Type " .. tostring(objType)); table.insert(reportLines, string.format("%-12s: %d", typeName, objectTypeCounts[objType])) end
 
     local highestZ, highestRef, objectCounts, modCounts = nil, nil, {}, {}
     for key, _ in pairs(visited) do
@@ -145,7 +147,7 @@ function reports.getLandmassReport()
         local totalCells = width * height
         if totalCells > 1900 then exportWord = "Main" end
         local fileName = exportWord and (exportWord .. " landmass report.txt") or "landmass report.txt"
-        local filePath = string.format("%s\\%s", config.EXPORT_FOLDER:gsub("[\\/]$", ""), fileName)
+        local filePath = string.format("%s\\%s", config.exportFolder:gsub("[\\/]$", ""), fileName)
 
         local exportLines = {}
 
@@ -204,7 +206,7 @@ function reports.getInteriorReport()
     for objId, count in pairs(objectCounts) do table.insert(objectList, {id = objId, count = count}) end
     table.sort(objectList, function(a, b) return a.count > b.count end)
     local reportLines = { string.format("Interior Cell: %s", cell.id or "Unknown"), "", "- OBJECT TYPES IN INTERIOR -", "Counts only placed references" }
-    for _, objType in ipairs(config.exportTypes) do local typeName = config.objectTypeNames[objType] or ("Type " .. tostring(objType)); table.insert(reportLines, string.format("%-12s: %d", typeName, objectTypeCounts[objType])) end
+    for _, objType in ipairs(config.exportTypes) do local typeName = constants.objectTypeNames[objType] or ("Type " .. tostring(objType)); table.insert(reportLines, string.format("%-12s: %d", typeName, objectTypeCounts[objType])) end
     table.insert(reportLines, "")
     table.insert(reportLines, "- MODS FOUND IN INTERIOR -")
     if #mods == 0 then table.insert(reportLines, "(No placed objects with source mod info found)") else for _, mod in ipairs(mods) do table.insert(reportLines, mod) end end
@@ -222,7 +224,7 @@ function reports.getInteriorReport()
     table.insert(reportLines, string.format("Number of Linked Interiors: %d", numLinkedInteriors))
     if config.exportReports then
         local fileName = (cell.id or "interior") .. " interior report.txt"
-        local filePath = string.format("%s\\%s", config.EXPORT_FOLDER:gsub("[\\/]$", ""), fileName)
+        local filePath = string.format("%s\\%s", config.exportFolder:gsub("[\\/]$", ""), fileName)
         local file, err = io.open(filePath, "w")
         if file then file:write(table.concat(reportLines, "\n")); file:close(); tes3.messageBox("Report exported: %s", fileName) else tes3.messageBox("Failed to write interior report.") end
     end

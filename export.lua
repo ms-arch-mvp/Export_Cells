@@ -1,15 +1,18 @@
 local export = {}
 
-local teleport = require("ExportCells.infrastructure.teleport")
+local constants = require("ExportCells.constants")
 local grid = require("ExportCells.infrastructure.grid")
-local utils = require("ExportCells.utils")
-local ui = require("ExportCells.ui")
-local jsonModule = require("ExportCells.modules.jsons")
-local reportsModule = require("ExportCells.modules.reports")
+local teleport = require("ExportCells.infrastructure.teleport")
+
+local charactersModule = require("ExportCells.modules.characters")
 local interiorsModule = require("ExportCells.modules.interiors")
+local jsonModule = require("ExportCells.modules.jsons")
 local nifsModule = require("ExportCells.modules.nifs")
 local objectsModule = require("ExportCells.modules.objects")
-local characterModule = require("ExportCells.modules.character")
+local reportsModule = require("ExportCells.modules.reports")
+
+local ui = require("ExportCells.ui")
+local utils = require("ExportCells.utils")
 
 local config = nil
 local exportCancelRequestedRef = { [1] = false }
@@ -19,22 +22,27 @@ local exportReturnCell = nil
 
 function export.setConfig(cfg)
     config = cfg
-    utils.setConfig(cfg)
+
     grid.setConfig(cfg)
     teleport.setConfig(cfg)
-    jsonModule.setConfig(cfg)
-    reportsModule.setConfig(cfg)
+
+    charactersModule.setConfig(cfg)
     interiorsModule.setConfig(cfg)
+    jsonModule.setConfig(cfg)
     nifsModule.setConfig(cfg)
     objectsModule.setConfig(cfg)
-    characterModule.setConfig(cfg)
+    reportsModule.setConfig(cfg)
+
+    -- Shared utils
+    utils.setConfig(cfg)
 end
 
 function export.setCancelRef(ref)
     exportCancelRequestedRef = ref or exportCancelRequestedRef
-    teleport.setCancelRef(exportCancelRequestedRef)
+    
     interiorsModule.setCancelRef(exportCancelRequestedRef)
     objectsModule.setCancelRef(exportCancelRequestedRef)
+    teleport.setCancelRef(exportCancelRequestedRef)
 end
 
 -- =============================================================================
@@ -50,14 +58,14 @@ end
 -- Orchestration functions
 exportActiveCells = function(exportMode, currentIndex, totalCount)
     exportMode = exportMode or config.defaultExportModes["active"]
-    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    if exportMode == constants.EXPORT_MODE.DISABLED then return end
     local activeCells = tes3.getActiveCells()
     exportCells(activeCells, exportMode, currentIndex, totalCount)
 end
 
 export2x2 = function(exportMode, currentIndex, totalCount)
     exportMode = exportMode or config.defaultExportModes["2x2"]
-    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    if exportMode == constants.EXPORT_MODE.DISABLED then return end
     local activeCells = tes3.getActiveCells()
     local regionCells = {}
 
@@ -79,7 +87,7 @@ end
 
 export3x3 = function(exportMode, currentIndex, totalCount)
     exportMode = exportMode or config.defaultExportModes["3x3"]
-    if exportMode == config.EXPORT_MODE.DISABLED then return end
+    if exportMode == constants.EXPORT_MODE.DISABLED then return end
     local activeCells = tes3.getActiveCells()
     exportCells(activeCells, exportMode, currentIndex, totalCount)
 end
@@ -156,7 +164,7 @@ function export.exportGridWithSize(size, gridType)
         if index > #sequence then finishExport(false); return end
         local coord = sequence[index]
         teleport.tryTeleportToCell(coord.x, coord.y, tes3.player.position.z, function()
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 if exportCancelRequestedRef[1] then finishExport(true); return end
                 if gridType == "3x3" then
                     export3x3(exportMode, index, #sequence)
@@ -165,13 +173,13 @@ function export.exportGridWithSize(size, gridType)
                 else
                     exportActiveCells(exportMode, index, #sequence)
                 end
-                timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processNextCell(index + 1) end })
+                timer.start({ duration = config.teleportDelaySeconds, callback = function() processNextCell(index + 1) end })
             end })
         end)
     end
 
     tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Starting %s export (%dx%d grid)", "Starting %s traversal (%dx%d grid)"), gridType, size, size)
-    timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processNextCell(1) end })
+    timer.start({ duration = config.teleportDelaySeconds, callback = function() processNextCell(1) end })
 end
 
 -- =============================================================================
@@ -209,7 +217,7 @@ function export.exportLandmassGrid(gridType)
         if index > #anchors then finishExport(false); return end
         local anchor = anchors[index]
         teleport.tryTeleportToCell(anchor.x, anchor.y, tes3.player.position.z, function()
-            timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function()
+            timer.start({ duration = config.teleportDelaySeconds, callback = function()
                 if exportCancelRequestedRef[1] then finishExport(true); return end
 
                 local regionCells = {}
@@ -227,7 +235,7 @@ function export.exportLandmassGrid(gridType)
                 end
 
                 exportCells(regionCells, exportMode, index, #anchors)
-                timer.start({ duration = config.TELEPORT_DELAY_SECONDS, callback = function() processAnchor(index + 1) end })
+                timer.start({ duration = config.teleportDelaySeconds, callback = function() processAnchor(index + 1) end })
             end })
         end)
     end
@@ -324,7 +332,7 @@ export.exportActiveCells = exportActiveCells
 
 function export.exportCharacter()
     local ref = tes3.getPlayerTarget()
-    characterModule.export(ref)
+    charactersModule.export(ref)
 end
 
 return export

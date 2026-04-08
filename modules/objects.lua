@@ -112,8 +112,8 @@ end
 
 local function collectFlaggedObjects()
     local fileName = config.flaggedNifsFile or "Flagged nifs.txt"
-    lfs.mkdir(config.EXPORT_FOLDER)
-    local path = config.EXPORT_FOLDER .. "\\" .. fileName
+    lfs.mkdir(config.exportFolder)
+    local path = config.exportFolder .. "\\" .. fileName
     
     local file = io.open(path, "r")
     if not file then return nil end
@@ -191,9 +191,9 @@ local function exportMeshPathLists()
     table.sort(rootPaths)
     table.sort(subPaths)
     
-    lfs.mkdir(config.EXPORT_FOLDER)
+    lfs.mkdir(config.exportFolder)
     local fileName = "Meshes.txt"
-    local filePath = config.EXPORT_FOLDER .. "\\" .. fileName
+    local filePath = config.exportFolder .. "\\" .. fileName
     local file = io.open(filePath, "w")
     if file then
         file:write("Referenced mesh paths (Morrowind game data)\n")
@@ -325,7 +325,7 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
                     end
                 end
 
-                lfs.mkdir(config.EXPORT_FOLDER)
+                lfs.mkdir(config.exportFolder)
                 local fileName
                 if folderName == "Flagged_nifs" then
                     if totalChunks > 1 then
@@ -348,7 +348,7 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
                         fileName = string.format("%s_meshes.nif", safeName)
                     end
                 end
-                local path = config.EXPORT_FOLDER .. "\\" .. fileName
+                local path = config.exportFolder .. "\\" .. fileName
                 
                 local success, err = pcall(function() root:saveBinary(path) end)
                 if not success then tes3.messageBox("FAILED to save %s: %s", fileName, err) end

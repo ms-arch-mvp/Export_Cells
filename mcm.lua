@@ -1,6 +1,7 @@
+local constants = require("ExportCells.constants")
 local defaultConfig = require("ExportCells.config")
 local config
-if defaultConfig.USE_SAVED_CONFIG then
+if defaultConfig.useSavedConfig then
     config = mwse.loadConfig("Export Cells", defaultConfig)
 else
     config = defaultConfig
@@ -24,16 +25,16 @@ function mcm.registerModConfig()
     exportPage:createTextField({
         label = "Export Folder Path",
         description = "Directory where exported files will be written.",
-        variable = mwse.mcm.createTableVariable({ id = "EXPORT_FOLDER", table = config })
+        variable = mwse.mcm.createTableVariable({ id = "exportFolder", table = config })
     })
 
     local exportModes = {
-        { label = "Everything", value = config.EXPORT_MODE.EVERYTHING },
-        { label = "Landscape Only", value = config.EXPORT_MODE.LANDSCAPE_ONLY },
-        { label = "Exclude Landscape", value = config.EXPORT_MODE.EXCLUDE_LANDSCAPE },
-        { label = "Layer", value = config.EXPORT_MODE.LAYER },
-        { label = "JSON", value = config.EXPORT_MODE.JSON },
-        { label = "Disabled", value = config.EXPORT_MODE.DISABLED },
+        { label = "Everything", value = constants.EXPORT_MODE.EVERYTHING },
+        { label = "Landscape Only", value = constants.EXPORT_MODE.LANDSCAPE_ONLY },
+        { label = "Exclude Landscape", value = constants.EXPORT_MODE.EXCLUDE_LANDSCAPE },
+        { label = "Layer", value = constants.EXPORT_MODE.LAYER },
+        { label = "JSON", value = constants.EXPORT_MODE.JSON },
+        { label = "Disabled", value = constants.EXPORT_MODE.DISABLED },
     }
 
     local exportModeGroup = exportPage:createCategory("Export Modes")
@@ -68,13 +69,36 @@ function mcm.registerModConfig()
 
     local layerOptions = {}
     local sortedTypes = {}
-    for k, v in pairs(config.objectTypeNames) do
+    for k, v in pairs(constants.objectTypeNames) do
         table.insert(sortedTypes, { id = k, name = v })
     end
     table.sort(sortedTypes, function(a, b) return a.name < b.name end)
     for _, item in ipairs(sortedTypes) do
         table.insert(layerOptions, { label = item.name, value = item.id })
     end
+
+    local customGridGroup = exportPage:createCategory("Custom Grid Sizes")
+
+    customGridGroup:createTextField({
+        label = "Custom Grid Size (1x1)",
+        description = "Additional grid size option for 1x1 exports.",
+        variable = mwse.mcm.createTableVariable({ id = "customGridSize1x1", table = config }),
+        numbersOnly = true
+    })
+
+    customGridGroup:createTextField({
+        label = "Custom Grid Size (2x2)",
+        description = "Additional grid size option for 2x2 exports.",
+        variable = mwse.mcm.createTableVariable({ id = "customGridSize2x2", table = config }),
+        numbersOnly = true
+    })
+
+    customGridGroup:createTextField({
+        label = "Custom Grid Size (3x3)",
+        description = "Additional grid size option for 3x3 exports.",
+        variable = mwse.mcm.createTableVariable({ id = "customGridSize3x3", table = config }),
+        numbersOnly = true
+    })
 
     exportModeGroup:createSlider({
         label = "Teleport Delay (seconds)",
@@ -84,7 +108,7 @@ function mcm.registerModConfig()
         step = 0.01,
         jump = 0.1,
         decimalPlaces = 2,
-        variable = mwse.mcm.createTableVariable({ id = "TELEPORT_DELAY_SECONDS", table = config })
+        variable = mwse.mcm.createTableVariable({ id = "teleportDelaySeconds", table = config })
     })
 
     exportModeGroup:createDropdown({

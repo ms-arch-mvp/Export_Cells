@@ -3,6 +3,7 @@ local utils = {}
 -- Utility helpers used by main.lua and ui.lua
 
 local config = nil
+local constants = require("ExportCells.constants")
 
 local function resetAnimation(ref)
     if not ref.animationData then
@@ -299,7 +300,7 @@ end
 
 function utils.traversalOrExportMsg(exportMode, exportMsg, traversalMsg)
     if not config then return exportMsg end
-    if exportMode == config.EXPORT_MODE.DISABLED then
+    if exportMode == constants.EXPORT_MODE.DISABLED then
         return traversalMsg
     else
         return exportMsg

@@ -1,5 +1,7 @@
 local nifs = {}
 
+local constants = require("ExportCells.constants")
+
 local config = nil
 local utils = require("ExportCells.utils")
 local jsonModule = require("ExportCells.modules.jsons")
@@ -12,11 +14,11 @@ end
 -- EXPORT EXECUTION
 -- =============================================================================
 function nifs.export(regionCells, exportMode, currentIndex, totalCount)
-    if exportMode == config.EXPORT_MODE.DISABLED then
+    if exportMode == constants.EXPORT_MODE.DISABLED then
         return
     end
 
-    if exportMode == config.EXPORT_MODE.JSON then
+    if exportMode == constants.EXPORT_MODE.JSON then
         jsonModule.export(regionCells, currentIndex, totalCount)
         return
     end
@@ -24,16 +26,16 @@ function nifs.export(regionCells, exportMode, currentIndex, totalCount)
     local root = niNode.new()
     local idCounters = {}
 
-    if exportMode ~= config.EXPORT_MODE.LANDSCAPE_ONLY then
-        local searchTypes = (exportMode == config.EXPORT_MODE.LAYER) and {config.exportLayerType} or config.exportTypes
+    if exportMode ~= constants.EXPORT_MODE.LANDSCAPE_ONLY then
+        local searchTypes = (exportMode == constants.EXPORT_MODE.LAYER) and {config.exportLayerType} or config.exportTypes
         for _, cell in pairs(regionCells) do
             for ref in cell:iterateReferences(searchTypes) do
                 local include = true
-                if exportMode == config.EXPORT_MODE.LAYER then
+                if exportMode == constants.EXPORT_MODE.LAYER then
                     if ref.object.objectType ~= config.exportLayerType then
                         include = false
                     end
-                elseif exportMode == config.EXPORT_MODE.EXCLUDE_LANDSCAPE then
+                elseif exportMode == constants.EXPORT_MODE.EXCLUDE_LANDSCAPE then
                     local isLight = ref.object.objectType == tes3.objectType.light
                     if not isLight and (not ref.object.mesh or ref.object.mesh == "") then
                         include = false
@@ -49,7 +51,7 @@ function nifs.export(regionCells, exportMode, currentIndex, totalCount)
                         local isLight = (obj.objectType == tes3.objectType.light)
                         local objId = obj.id
 
-                        if exportMode == config.EXPORT_MODE.LAYER and config.resetAnimation and isCharacter then
+                        if exportMode == constants.EXPORT_MODE.LAYER and config.resetAnimation and isCharacter then
                             utils.resetAnimation(ref)
                         end
                         if isCharacter then
@@ -93,7 +95,7 @@ function nifs.export(regionCells, exportMode, currentIndex, totalCount)
     end
 
     -- Landscape
-    if not tes3.player.cell.isInterior and exportMode ~= config.EXPORT_MODE.EXCLUDE_LANDSCAPE and exportMode ~= config.EXPORT_MODE.LAYER then
+    if not tes3.player.cell.isInterior and exportMode ~= constants.EXPORT_MODE.EXCLUDE_LANDSCAPE and exportMode ~= constants.EXPORT_MODE.LAYER then
         local landscapeRoot = tes3.game.worldLandscapeRoot
         local node = niNode.new()
         node.name = landscapeRoot.name
@@ -142,17 +144,17 @@ function nifs.export(regionCells, exportMode, currentIndex, totalCount)
     end
 
     local modeSuffix = ""
-    if exportMode == config.EXPORT_MODE.EXCLUDE_LANDSCAPE then
+    if exportMode == constants.EXPORT_MODE.EXCLUDE_LANDSCAPE then
         modeSuffix = "_no_landscape"
-    elseif exportMode == config.EXPORT_MODE.LANDSCAPE_ONLY then
+    elseif exportMode == constants.EXPORT_MODE.LANDSCAPE_ONLY then
         modeSuffix = "_landscape"
-    elseif exportMode == config.EXPORT_MODE.LAYER then
-        local typeName = config.objectTypeNames[config.exportLayerType] or "Layer"
+    elseif exportMode == constants.EXPORT_MODE.LAYER then
+        local typeName = constants.objectTypeNames[config.exportLayerType] or "Layer"
         modeSuffix = "_" .. typeName:gsub("%s+", "_")
     end
 
-    lfs.mkdir(config.EXPORT_FOLDER)
-    local path = string.format("%s\\%s%s%s.nif", config.EXPORT_FOLDER, coords, cellName, modeSuffix)
+    lfs.mkdir(config.exportFolder)
+    local path = string.format("%s\\%s%s%s.nif", config.exportFolder, coords, cellName, modeSuffix)
     root:saveBinary(path)
 
     local exportMsg = string.format("%s%s%s.nif", coords, cellName, modeSuffix)
