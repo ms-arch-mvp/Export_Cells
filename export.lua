@@ -33,7 +33,6 @@ function export.setConfig(cfg)
     objectsModule.setConfig(cfg)
     reportsModule.setConfig(cfg)
 
-    -- Shared utils
     utils.setConfig(cfg)
 end
 
@@ -50,12 +49,10 @@ end
 -- =============================================================================
 local exportActiveCells, export2x2, export3x3
 
--- Delegate the core export to nifsModule
 local function exportCells(regionCells, exportMode, currentIndex, totalCount)
     nifsModule.export(regionCells, exportMode, currentIndex, totalCount)
 end
 
--- Orchestration functions
 exportActiveCells = function(exportMode, currentIndex, totalCount)
     exportMode = exportMode or config.defaultExportModes["active"]
     if exportMode == constants.EXPORT_MODE.DISABLED then return end
@@ -92,10 +89,8 @@ export3x3 = function(exportMode, currentIndex, totalCount)
     exportCells(activeCells, exportMode, currentIndex, totalCount)
 end
 
--- Wire up interiors to use these orchestrators
 interiorsModule.setExportActiveCellsRef(exportActiveCells)
 interiorsModule.onComplete = function(cancelled, singleCell, gridType)
-    -- This matches the finishExport logic in exportGridWithSize
     exportInProgress = false
     exportCancelRequestedRef[1] = false
     if not singleCell and exportReturnPos and exportReturnCell then
@@ -324,7 +319,7 @@ function export.exportObjectsByMeshFolder(folder)
             end
         })
     end
-end-- Public API
+end
 export.exportCells = exportCells
 export.export2x2 = export2x2
 export.export3x3 = export3x3
