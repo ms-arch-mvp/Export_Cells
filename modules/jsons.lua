@@ -169,6 +169,10 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     end
                 end
 
+                if obj.script then
+                    table.insert(fieldLines, "    " .. jsonString("script") .. ": " .. jsonString(obj.script.id or "") .. ",")
+                end
+
                 if isLight and obj.color and obj.radius then
                     local r = (obj.color[1] or 0) / 255
                     local g = (obj.color[2] or 0) / 255
