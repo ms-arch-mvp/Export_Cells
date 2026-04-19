@@ -156,6 +156,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     source_mod     = function() return jsonString(ref.sourceMod or "") end,
                     morrowind_type = function() return jsonString(typeName) end,
                     mesh           = function() return relMesh and jsonString(relMesh) end,
+                    script         = function() return obj.script and jsonString(obj.script.id or "") end,
                 }
                 
                 local fieldLines = {}
@@ -167,10 +168,6 @@ function jsons.export(regionCells, currentIndex, totalCount)
                             table.insert(fieldLines, string.format("    %s: %s,", jsonString(field), val))
                         end
                     end
-                end
-
-                if obj.script then
-                    table.insert(fieldLines, "    " .. jsonString("script") .. ": " .. jsonString(obj.script.id or "") .. ",")
                 end
 
                 if isLight and obj.color and obj.radius then
