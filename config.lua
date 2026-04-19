@@ -72,6 +72,7 @@ local config = {
         "source_mod",
         "morrowind_type",
         "mesh",
+        "script",
     },
 
     jsonLightChildNodesOnly = true,
