@@ -67,10 +67,12 @@ local config = {
     -- =============================================================================
     jsonFields = {
         "object_id",
+        "object_name",
         -- "source_form_id",
         -- "source_mod_id",    
         "source_mod",
         "morrowind_type",
+        "is_item",
         "mesh",
         "script",
     },

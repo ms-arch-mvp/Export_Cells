@@ -66,4 +66,22 @@ constants.objectTypeNames = {
     [tes3.objectType.weapon] = "Weapon",
 }
 
+-- =============================================================================
+-- ITEM TYPES (PICKABLE)
+-- =============================================================================
+constants.itemTypes = {
+    [tes3.objectType.alchemy] = true,
+    [tes3.objectType.ammunition] = true,
+    [tes3.objectType.apparatus] = true,
+    [tes3.objectType.armor] = true,
+    [tes3.objectType.book] = true,
+    [tes3.objectType.clothing] = true,
+    [tes3.objectType.ingredient] = true,
+    [tes3.objectType.lockpick] = true,
+    [tes3.objectType.miscItem] = true,
+    [tes3.objectType.probe] = true,
+    [tes3.objectType.repairItem] = true,
+    [tes3.objectType.weapon] = true,
+}
+
 return constants
