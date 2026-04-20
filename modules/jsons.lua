@@ -19,6 +19,7 @@ local function jsonString(s)
 end
 
 local function jsonNumber(n)
+    if type(n) ~= "number" then return "0" end
     if n ~= n then return "0" end          -- NaN guard
     if n == math.huge or n == -math.huge then return "0" end
     return string.format("%.8g", n)
@@ -73,18 +74,60 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
     -- ---- Root cell empty ----
     local rootName = coords .. cellName .. suffix
-    table.insert(entries, table.concat({
+    local regionId = cell.region and cell.region.id or ""
+
+    local function jsonColor(c)
+        if not c then return "null" end
+        return string.format("[%s, %s, %s]", jsonNumber(c.r), jsonNumber(c.g), jsonNumber(c.b))
+    end
+
+    local rootLines = {
         "  {",
         "    " .. jsonString("name") .. ": " .. jsonString(rootName) .. ",",
         "    " .. jsonString("type") .. ": " .. jsonString("EMPTY") .. ",",
-        "    " .. jsonString("matrix_local") .. ": [\n      [1,0,0,0],\n      [0,1,0,0],\n      [0,0,1,0],\n      [0,0,0,1]\n    ],",
-        "    " .. jsonString("parent") .. ": null,",
-        "    " .. jsonString("empty_data") .. ": {" ..
-            jsonString("display_type") .. ": " .. jsonString("PLAIN_AXES") .. ", " ..
-            jsonString("display_size") .. ": 0.01" ..
-        "}",
-        "  }",
-    }, "\n"))
+    }
+    if cell.isInterior then
+        table.insert(rootLines, "    " .. jsonString("is_interior") .. ": true,")
+    end
+    if cell.behavesAsExterior then
+        table.insert(rootLines, "    " .. jsonString("behaves_as_exterior") .. ": true,")
+    end
+    if cell.isInterior then
+        if regionId ~= "" then
+            table.insert(rootLines, "    " .. jsonString("region") .. ": " .. jsonString(regionId) .. ",")
+        end
+        table.insert(rootLines, "    " .. jsonString("ambient_color") .. ": " .. jsonColor(cell.ambientColor) .. ",")
+        table.insert(rootLines, "    " .. jsonString("sun_color") .. ": " .. jsonColor(cell.sunColor) .. ",")
+        table.insert(rootLines, "    " .. jsonString("fog_color") .. ": " .. jsonColor(cell.fogColor) .. ",")
+        table.insert(rootLines, "    " .. jsonString("fog_density") .. ": " .. jsonNumber(cell.fogDensity ~= nil and cell.fogDensity or 0) .. ",")
+        table.insert(rootLines, "    " .. jsonString("has_water") .. ": " .. tostring(cell.hasWater and true or false) .. ",")
+        if cell.hasWater then
+            table.insert(rootLines, "    " .. jsonString("water_level") .. ": " .. jsonNumber(cell.waterLevel or 0) .. ",")
+        end
+    end
+    -- ---- cells array: one entry per cell in the 3x3 export ----
+    local cellEntries = {}
+    for _, c in pairs(regionCells) do
+        if not c.isInterior then
+            local cName = (c.id):gsub("%s+", "_"):gsub(":", "-")
+            local cRegion = (c.region and c.region.id) or ""
+            table.insert(cellEntries,
+                "      {" ..
+                jsonString("x")      .. ": " .. jsonNumber(c.gridX) .. ", " ..
+                jsonString("y")      .. ": " .. jsonNumber(c.gridY) .. ", " ..
+                jsonString("name")   .. ": " .. jsonString(cName)   .. ", " ..
+                jsonString("region") .. ": " .. jsonString(cRegion) ..
+                "}"
+            )
+        end
+    end
+    if #cellEntries > 0 then
+        table.insert(rootLines, "    " .. jsonString("cells") .. ": [\n" .. table.concat(cellEntries, ",\n") .. "\n    ],")
+    end
+    table.insert(rootLines, "    " .. jsonString("matrix_local") .. ": [\n      [1,0,0,0],\n      [0,1,0,0],\n      [0,0,1,0],\n      [0,0,0,1]\n    ],")
+    table.insert(rootLines, "    " .. jsonString("parent") .. ": null")
+    table.insert(rootLines, "  }")
+    table.insert(entries, table.concat(rootLines, "\n"))
 
     local idCounters = {}
 
