@@ -109,7 +109,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
     local cellEntries = {}
     for _, c in pairs(regionCells) do
         if not c.isInterior then
-            local cName = (c.id):gsub("%s+", "_"):gsub(":", "-")
+            local cName = c.id
             local cRegion = (c.region and c.region.id) or ""
             table.insert(cellEntries,
                 "      {" ..
