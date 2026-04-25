@@ -111,7 +111,7 @@ function interiors.exportInteriorsFromSameMod(gridType)
         if id ~= startId then table.insert(targets, id) end
     end
 
-    if config.exportInteriorsLists then
+    if config.exportReports then
         local exportList = {}
         for _, id in ipairs(cellNames) do table.insert(exportList, id) end
         table.sort(exportList)
