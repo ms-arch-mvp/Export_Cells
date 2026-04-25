@@ -54,7 +54,6 @@ local config = {
     exportHidden = false,
     cleanExports = false,
     exportReports = true,
-    exportInteriorsLists = true,
     exportEmptyLandmassCells = true,
     interiorGarbageCollection = true,
     resetAnimation = true,

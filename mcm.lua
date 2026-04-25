@@ -134,14 +134,8 @@ function mcm.registerModConfig()
 
     toggleGroup:createYesNoButton({
         label = "Export Reports",
-        description = "Exports a text report including all cell names and object counts.",
+        description = "Saves text for reports and exports.",
         variable = mwse.mcm.createTableVariable({ id = "exportReports", table = config })
-    })
-
-    toggleGroup:createYesNoButton({
-        label = "Export Interiors Lists",
-        description = "Exports a list of interior cell names when exporting all interiors.",
-        variable = mwse.mcm.createTableVariable({ id = "exportInteriorsLists", table = config })
     })
 
     toggleGroup:createYesNoButton({

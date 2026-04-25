@@ -110,6 +110,49 @@ end
 -- =============================================================================
 -- GRID EXPORT CONTROLLER
 -- =============================================================================
+local function writeExteriorsTxt(cell, gridType, exportMode, size)
+    if not config.exportReports then return end
+    if exportMode == constants.EXPORT_MODE.DISABLED then return end
+    if gridType == "1x1" or gridType == "2x2" or gridType == "3x3" then
+        local exportFolder = config.exportFolder and config.exportFolder:gsub("[\\/]$", "") or ""
+        if exportFolder ~= "" then lfs.mkdir(exportFolder) end
+        local fileName = "Exteriors.txt"
+        local filePath = string.format("%s\\%s", exportFolder, fileName)
+        local file = io.open(filePath, "w")
+        if file then
+            local cellNameStr = ""
+            if cell.id and cell.id ~= "" then
+                cellNameStr = string.format("%d, %d %s", cell.gridX, cell.gridY, cell.id)
+            else
+                cellNameStr = string.format("%d, %d Wilderness", cell.gridX, cell.gridY)
+            end
+            local extentStr = "N/A"
+            if size == "Landmass" then
+                extentStr = "Landmass"
+            elseif type(size) == "number" then
+                local gridPositions = size * size
+                if gridType == "2x2" then
+                    extentStr = string.format("%dx%d (%dx%d cells, %d total)", size, size, size * 2, size * 2, gridPositions * 4)
+                elseif gridType == "3x3" then
+                    extentStr = string.format("%dx%d (%dx%d cells, %d total)", size, size, size * 3, size * 3, gridPositions * 9)
+                else
+                    extentStr = string.format("%dx%d (%d cells)", size, size, gridPositions)
+                end
+            end
+            
+            local outputStr = string.format("Starting Cell: %s\nGrid Type: %s\nExtent: %s\n", cellNameStr, gridType, extentStr)
+            
+            if exportMode == constants.EXPORT_MODE.LAYER then
+                local layerName = constants.objectTypeNames and constants.objectTypeNames[config.exportLayerType] or tostring(config.exportLayerType)
+                outputStr = outputStr .. string.format("Layer: %s\n", layerName)
+            end
+
+            file:write(outputStr)
+            file:close()
+        end
+    end
+end
+
 function export.exportGridWithSize(size, gridType)
     utils.setupExportConsoleToggles()
     local cell = tes3.player.cell
@@ -122,6 +165,8 @@ function export.exportGridWithSize(size, gridType)
         interiorsModule.exportInteriorsFromSameMod(gridType)
         return
     end
+
+    writeExteriorsTxt(cell, gridType, exportMode, size)
 
     local startX, startY = cell.gridX, cell.gridY
     exportReturnPos = tes3.player.position:copy()
@@ -189,6 +234,8 @@ function export.exportLandmassGrid(gridType)
 
     local anchors = grid.getGridAnchors(gridType, extents.minX, extents.maxX, extents.minY, extents.maxY, extents.visited)
     local exportMode = config.defaultExportModes[gridType]
+
+    writeExteriorsTxt(tes3.player.cell, gridType, exportMode, "Landmass")
 
     exportReturnPos = tes3.player.position:copy()
     exportReturnCell = tes3.player.cell
