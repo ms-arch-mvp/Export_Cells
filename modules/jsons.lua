@@ -178,10 +178,12 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 end
 
                 local objId    = obj.id
+                local objName  = obj.name
                 local objType  = obj.objectType
                 local isLight  = (objType == tes3.objectType.light)
                 local typeName = constants.objectTypeNames and constants.objectTypeNames[objType] or tostring(objType)
                 local relMesh = utils.getRelativeMeshPath(meshPath)
+                local isItem  = (constants.itemTypes[objType] == true) or (objType == tes3.objectType.light and obj.canCarry == true)
 
                 idCounters[objId] = (idCounters[objId] or 0) + 1
                 local count    = idCounters[objId]
@@ -194,10 +196,12 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                 local fieldMap = {
                     object_id      = function() return jsonString(objId) end,
+                    object_name    = function() return objName and objName ~= "" and jsonString(objName) end,
                     source_form_id = function() return jsonNumber(ref.sourceFormId or 0) end,
                     source_mod_id  = function() return jsonNumber(ref.sourceModId or 0) end,
                     source_mod     = function() return jsonString(ref.sourceMod or "") end,
                     morrowind_type = function() return jsonString(typeName) end,
+                    is_item        = function() return isItem and "true" or nil end,
                     mesh           = function() return relMesh and jsonString(relMesh) end,
                     script         = function() return obj.script and jsonString(obj.script.id or "") end,
                 }
@@ -220,11 +224,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     local lightJson = table.concat({
                         "{",
                         "      " .. jsonString("color")        .. ": [" .. jsonNumber(r) .. ", " .. jsonNumber(g) .. ", " .. jsonNumber(b) .. "],",
-                        "      " .. jsonString("radius")       .. ": " .. jsonNumber(obj.radius) .. ",",
-                        "      " .. jsonString("flickers")     .. ": " .. tostring(obj.flickers     and true or false) .. ",",
-                        "      " .. jsonString("flicker_slow") .. ": " .. tostring(obj.flickerSlow  and true or false) .. ",",
-                        "      " .. jsonString("pulses")       .. ": " .. tostring(obj.pulses        and true or false) .. ",",
-                        "      " .. jsonString("pulse_slow")   .. ": " .. tostring(obj.pulseSlow     and true or false),
+                        "      " .. jsonString("radius")       .. ": " .. jsonNumber(obj.radius),
                         "    }"
                     }, "\n    ")
                     table.insert(fieldLines, #fieldLines, "    " .. jsonString("light_data") .. ": " .. lightJson .. ",")
@@ -263,7 +263,8 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 if isLight then
                     for node in table.traverse({cloned}) do
                         if node:isInstanceOfType(tes3.niType.NiPointLight) or
-                           node:isInstanceOfType(tes3.niType.NiSpotLight) then
+                           node:isInstanceOfType(tes3.niType.NiSpotLight) or
+                           node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
                             lightAncestors[tostring(node)] = true
                             local p = node.parent
                             while p and tostring(p) ~= tostring(cloned) do
@@ -313,7 +314,10 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     local lt = { translation = node.translation, rotation = node.rotation, scale = node.scale }
 
                     local jsonType = nil
-                    if node:isInstanceOfType(tes3.niType.NiPointLight) or
+                    if node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
+                        jsonType = "PARTICLE"
+                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+                    elseif node:isInstanceOfType(tes3.niType.NiPointLight) or
                        node:isInstanceOfType(tes3.niType.NiSpotLight) then
                         jsonType = constants.jsonNodeTypes[tes3.niType.NiPointLight] or "LIGHT"
                         local cr = node.diffuse and node.diffuse.r or 1
@@ -323,10 +327,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                         local lightJson = table.concat({
                             "{",
                             "      " .. jsonString("type")             .. ": " .. jsonString("POINT") .. ",",
-                            "      " .. jsonString("color")            .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "],",
-                            "      " .. jsonString("energy")           .. ": " .. jsonNumber(10.0) .. ",",
-                            "      " .. jsonString("shadow_soft_size") .. ": " .. jsonNumber(0.0) .. ",",
-                            "      " .. jsonString("cutoff_distance")  .. ": " .. jsonNumber(radius),
+                            "      " .. jsonString("color")            .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "]",
                             "    }"
                         }, "\n    ")
                         emitLightEntry(nodeName, parentJsonName, lt, lightJson, jsonType)
