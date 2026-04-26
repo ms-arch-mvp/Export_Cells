@@ -9,6 +9,13 @@ function jsons.setConfig(cfg)
     config = cfg
 end
 
+-- Default replacement for nil json node type lookups (tied to a single variable)
+local NIL_TYPE = constants.jsonNodeTypes[tes3.niType.NiNode]
+
+local function resolveNodeTypeString(s)
+    return s or NIL_TYPE
+end
+
 -- =============================================================================
 -- SERIALIZATION HELPERS
 -- =============================================================================
@@ -84,7 +91,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
     local rootLines = {
         "  {",
         "    " .. jsonString("name") .. ": " .. jsonString(rootName) .. ",",
-        "    " .. jsonString("type") .. ": " .. jsonString("EMPTY") .. ",",
+        "    " .. jsonString("type") .. ": " .. jsonString(resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode])) .. ",",
     }
     if cell.isInterior then
         table.insert(rootLines, "    " .. jsonString("is_interior") .. ": true,")
@@ -136,7 +143,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
         local lines = {
             "  {",
             "    " .. jsonString("name")         .. ": " .. jsonString(nodeName) .. ",",
-            "    " .. jsonString("type")         .. ": " .. jsonString(nodeType or "EMPTY")  .. ",",
+            "    " .. jsonString("type")         .. ": " .. jsonString(resolveNodeTypeString(nodeType))  .. ",",
             "    " .. jsonString("matrix_local") .. ": [\n" .. matStr .. "\n    ],",
             "    " .. jsonString("parent")       .. ": " .. jsonString(parentName),
         }
@@ -154,7 +161,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
         local lines = {
             "  {",
             "    " .. jsonString("name")         .. ": " .. jsonString(nodeName)   .. ",",
-            "    " .. jsonString("type")         .. ": " .. jsonString(nodeType or "LIGHT")    .. ",",
+            "    " .. jsonString("type")         .. ": " .. jsonString(resolveNodeTypeString(nodeType))    .. ",",
             "    " .. jsonString("matrix_local") .. ": [\n" .. matStr .. "\n    ],",
             "    " .. jsonString("parent")       .. ": " .. jsonString(parentName) .. ",",
             "    " .. jsonString("light_data")   .. ": " .. lightData,
@@ -249,7 +256,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     rootTransform = { translation = wt.translation, rotation = wt.rotation, scale = cloned.scale or 1 }
                 end
 
-                emitEntry(instName, rootName, rootTransform, "EMPTY", fieldLines)
+                emitEntry(instName, rootName, rootTransform, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), fieldLines)
 
                 -- Non-light instances: no child nodes are used by the importer, skip traversal.
                 if config.jsonSelectiveChildNodesOnly and not isLight then goto continue end
@@ -257,18 +264,18 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 local nodeJsonNames = {}
                 nodeJsonNames[tostring(cloned)] = instName
 
-                -- Pre-pass: build set of nodes that are NiPointLight/NiSpotLight
-                -- or ancestors of one. Only these will be emitted.
-                local lightAncestors = {}
+                -- Pre-pass: build set of selected nodes (lights, particles, etc.)
+                -- and their ancestors. Only these will be emitted.
+                local selectedAncestors = {}
                 if isLight then
                     for node in table.traverse({cloned}) do
                         if node:isInstanceOfType(tes3.niType.NiPointLight) or
                            node:isInstanceOfType(tes3.niType.NiSpotLight) or
                            node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
-                            lightAncestors[tostring(node)] = true
+                            selectedAncestors[tostring(node)] = true
                             local p = node.parent
                             while p and tostring(p) ~= tostring(cloned) do
-                                lightAncestors[tostring(p)] = true
+                                selectedAncestors[tostring(p)] = true
                                 p = p.parent
                             end
                         end
@@ -290,7 +297,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                     -- For light-bearing instances, skip nodes that are not lights
                     -- or ancestors of lights — the importer doesn't use them.
-                    if config.jsonSelectiveChildNodesOnly and isLight and not lightAncestors[tostring(node)] then
+                    if config.jsonSelectiveChildNodesOnly and isLight and not selectedAncestors[tostring(node)] then
                         goto nextNode
                     end
 
@@ -315,11 +322,14 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                     local jsonType = nil
                     if node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
-                        jsonType = "PARTICLE"
+                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiBSParticleNode])
+                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+                    elseif node:isInstanceOfType(tes3.niType.NiLODNode) then
+                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiLODNode])
                         emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
                     elseif node:isInstanceOfType(tes3.niType.NiPointLight) or
                        node:isInstanceOfType(tes3.niType.NiSpotLight) then
-                        jsonType = constants.jsonNodeTypes[tes3.niType.NiPointLight] or "LIGHT"
+                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiPointLight])
                         local cr = node.diffuse and node.diffuse.r or 1
                         local cg = node.diffuse and node.diffuse.g or 1
                         local cb = node.diffuse and node.diffuse.b or 1
@@ -332,7 +342,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                         }, "\n    ")
                         emitLightEntry(nodeName, parentJsonName, lt, lightJson, jsonType)
                     elseif node:isInstanceOfType(tes3.niType.NiNode) then
-                        jsonType = constants.jsonNodeTypes[tes3.niType.NiNode] or "EMPTY"
+                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode])
                         local meshScale = nil
                         if node.children then
                             for _, child in ipairs(node.children) do
@@ -347,10 +357,10 @@ function jsons.export(regionCells, currentIndex, totalCount)
                             lt = { translation = lt.translation, rotation = lt.rotation, scale = meshScale }
                         end
                         emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
-                    elseif node:isInstanceOfType(tes3.niType.NiTriShape) or
-                           node:isInstanceOfType(tes3.niType.NiTriStrips) then
-                        jsonType = constants.jsonNodeTypes[tes3.niType.NiTriShape] or "EMPTY"
-                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+                          elseif node:isInstanceOfType(tes3.niType.NiTriShape) or
+                                    node:isInstanceOfType(tes3.niType.NiTriStrips) then
+                                jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiTriShape])
+                                emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
                     end
 
                     ::nextNode::
