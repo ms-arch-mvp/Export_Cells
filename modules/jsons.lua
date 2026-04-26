@@ -204,10 +204,10 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 local fieldMap = {
                     object_id      = function() return jsonString(objId) end,
                     object_name    = function() return objName and objName ~= "" and jsonString(objName) end,
+                    object_type = function() return jsonString(typeName) end,
                     source_form_id = function() return jsonNumber(ref.sourceFormId or 0) end,
                     source_mod_id  = function() return jsonNumber(ref.sourceModId or 0) end,
                     source_mod     = function() return jsonString(ref.sourceMod or "") end,
-                    morrowind_type = function() return jsonString(typeName) end,
                     is_item        = function() return isItem and "true" or nil end,
                     mesh           = function() return relMesh and jsonString(relMesh) end,
                     script         = function() return obj.script and jsonString(obj.script.id or "") end,
