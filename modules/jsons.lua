@@ -252,7 +252,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 emitEntry(instName, rootName, rootTransform, "EMPTY", fieldLines)
 
                 -- Non-light instances: no child nodes are used by the importer, skip traversal.
-                if config.jsonLightChildNodesOnly and not isLight then goto continue end
+                if config.jsonSelectiveChildNodesOnly and not isLight then goto continue end
 
                 local nodeJsonNames = {}
                 nodeJsonNames[tostring(cloned)] = instName
@@ -290,7 +290,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                     -- For light-bearing instances, skip nodes that are not lights
                     -- or ancestors of lights — the importer doesn't use them.
-                    if config.jsonLightChildNodesOnly and isLight and not lightAncestors[tostring(node)] then
+                    if config.jsonSelectiveChildNodesOnly and isLight and not lightAncestors[tostring(node)] then
                         goto nextNode
                     end
 
