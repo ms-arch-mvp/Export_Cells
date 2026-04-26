@@ -157,9 +157,9 @@ function mcm.registerModConfig()
     })
 
     toggleGroup:createYesNoButton({
-        label = "JSON: Light Child Nodes Only",
-        description = "JSON exports only exports child nodes of lights rather than the whole hierarchy.",
-        variable = mwse.mcm.createTableVariable({ id = "jsonLightChildNodesOnly", table = config })
+        label = "JSON: Selective Child Nodes Only",
+        description = "JSON exports only exports selective child nodes (Lights, Particles) rather than the whole hierarchy.",
+        variable = mwse.mcm.createTableVariable({ id = "jsonSelectiveChildNodesOnly", table = config })
     })
 
     toggleGroup:createYesNoButton({

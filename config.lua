@@ -23,7 +23,7 @@ local config = {
     -- EXPORT
     -- =============================================================================
     defaultExportModes = {
-        ["active"] = "everything",
+        ["active"] = "json",
         ["1x1"] = "disabled",
         ["2x2"] = "landscape_only",
         ["3x3"] = "json"
@@ -76,7 +76,7 @@ local config = {
         "script",
     },
 
-    jsonLightChildNodesOnly = true,
+    jsonSelectiveChildNodesOnly = true,
     jsonSequentialNaming = true,
 
 
