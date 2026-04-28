@@ -190,7 +190,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 local isLight  = (objType == tes3.objectType.light)
                 local typeName = constants.objectTypeNames and constants.objectTypeNames[objType] or tostring(objType)
                 local relMesh = utils.getRelativeMeshPath(meshPath)
-                local isItem  = (constants.itemTypes[objType] == true) or (objType == tes3.objectType.light and obj.canCarry == true)
+                local canCarry = (objType == tes3.objectType.light and obj.canCarry == true)
 
                 idCounters[objId] = (idCounters[objId] or 0) + 1
                 local count    = idCounters[objId]
@@ -208,7 +208,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     source_form_id = function() return jsonNumber(ref.sourceFormId or 0) end,
                     source_mod_id  = function() return jsonNumber(ref.sourceModId or 0) end,
                     source_mod     = function() return jsonString(ref.sourceMod or "") end,
-                    is_item        = function() return isItem and "true" or nil end,
+                    can_carry      = function() return canCarry and "true" or nil end,
                     mesh           = function() return relMesh and jsonString(relMesh) end,
                     script         = function() return obj.script and jsonString(obj.script.id or "") end,
                 }
@@ -264,22 +264,82 @@ function jsons.export(regionCells, currentIndex, totalCount)
                 local nodeJsonNames = {}
                 nodeJsonNames[tostring(cloned)] = instName
 
-                -- Pre-pass: build set of selected nodes (lights, particles, etc.)
-                -- and their ancestors. Only these will be emitted.
+                -- Pre-pass: build selectedAncestors for light-bearing refs, and collect
+                -- emitter nodes using == identity comparison (tostring is not unique per node).
                 local selectedAncestors = {}
-                if isLight then
-                    for node in table.traverse({cloned}) do
-                        if node:isInstanceOfType(tes3.niType.NiPointLight) or
-                           node:isInstanceOfType(tes3.niType.NiSpotLight) or
-                           node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
-                            selectedAncestors[tostring(node)] = true
-                            local p = node.parent
-                            while p and tostring(p) ~= tostring(cloned) do
-                                selectedAncestors[tostring(p)] = true
-                                p = p.parent
+                local emitterList = {} -- { node, particleName, birthRate, speed, initialSize, jsonName }
+
+                local function findEmitterEntry(node)
+                    for _, e in ipairs(emitterList) do
+                        if e.node == node then return e end
+                    end
+                end
+
+                for node in table.traverse({cloned}) do
+                    local isParticle  = node:isInstanceOfType(tes3.niType.NiBSParticleNode)
+                    local isLightNode = node:isInstanceOfType(tes3.niType.NiPointLight) or
+                                        node:isInstanceOfType(tes3.niType.NiSpotLight)
+
+                    if isLight and (isLightNode or isParticle) then
+                        selectedAncestors[tostring(node)] = true
+                        local p = node.parent
+                        while p and tostring(p) ~= tostring(cloned) do
+                            selectedAncestors[tostring(p)] = true
+                            p = p.parent
+                        end
+                    end
+
+                    if isParticle and node.children then
+                        for _, child in ipairs(node.children) do
+                            if child then
+                                local ctrl = child.controller
+                                while ctrl do
+                                    local ok, emNode = pcall(function() return ctrl.emitter end)
+                                    if ok and emNode then
+                                        -- Use == identity to check if this emitter is already recorded.
+                                        if not findEmitterEntry(emNode) then
+                                            table.insert(emitterList, {
+                                                node         = emNode,
+                                                particleName = node.name or "",
+                                                birthRate    = ctrl.birthRate,
+                                                speed        = ctrl.speed,
+                                                initialSize  = ctrl.initialSize,
+                                            })
+                                            if isLight then
+                                                selectedAncestors[tostring(emNode)] = true
+                                                local ep = emNode.parent
+                                                while ep and tostring(ep) ~= tostring(cloned) do
+                                                    selectedAncestors[tostring(ep)] = true
+                                                    ep = ep.parent
+                                                end
+                                            end
+                                        end
+                                        break
+                                    end
+                                    ctrl = ctrl.nextController
+                                end
                             end
                         end
                     end
+                end
+
+                -- Pre-assign JSON names for all emitter nodes now, so PARTICLE_SYSTEM nodes
+                -- can reference them regardless of traversal order.
+                for _, entry in ipairs(emitterList) do
+                    local emBase = (entry.node.name and entry.node.name ~= "") and entry.node.name or "emitter"
+                    local emName
+                    if config.jsonSequentialNaming then
+                        idCounters[emBase] = (idCounters[emBase] or 0) + 1
+                        local ci = idCounters[emBase]
+                        emName = ci == 1 and emBase or string.format("%s.%03d", emBase, ci - 1)
+                    else
+                        emName = emBase
+                        idCounters[emName] = (idCounters[emName] or 0) + 1
+                        if idCounters[emName] > 1 then
+                            emName = string.format("%s (%s)", emName, tostring(entry.node):match("0x(%w+)") or "?")
+                        end
+                    end
+                    entry.jsonName = emName
                 end
 
                 for node in table.traverse({cloned}) do
@@ -289,14 +349,10 @@ function jsons.export(regionCells, currentIndex, totalCount)
                     local parentJsonName = nodeJsonNames[tostring(node.parent)]
                     if not parentJsonName then goto nextNode end
 
-                    -- Exclude collision nodes and their entire subtree by not registering
-                    -- in nodeJsonNames — all descendants will fail the parentJsonName check.
                     if node:isInstanceOfType(tes3.niType.RootCollisionNode) then
                         goto nextNode
                     end
 
-                    -- For light-bearing instances, skip nodes that are not lights
-                    -- or ancestors of lights — the importer doesn't use them.
                     if config.jsonSelectiveChildNodesOnly and isLight and not selectedAncestors[tostring(node)] then
                         goto nextNode
                     end
@@ -305,9 +361,8 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                     local nodeName
                     if config.jsonSequentialNaming then
-                        local counterKey = baseName
-                        idCounters[counterKey] = (idCounters[counterKey] or 0) + 1
-                        local ci = idCounters[counterKey]
+                        idCounters[baseName] = (idCounters[baseName] or 0) + 1
+                        local ci = idCounters[baseName]
                         nodeName = ci == 1 and baseName or string.format("%s.%03d", baseName, ci - 1)
                     else
                         nodeName = baseName
@@ -320,47 +375,96 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
                     local lt = { translation = node.translation, rotation = node.rotation, scale = node.scale }
 
-                    local jsonType = nil
                     if node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
-                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiBSParticleNode])
-                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+                        -- Read emitter reference and particle data from the child geometry's controller.
+                        local ed = nil
+                        local emJsonName = nil
+                        if node.children then
+                            for _, child in ipairs(node.children) do
+                                if child then
+                                    local ctrl = child.controller
+                                    while ctrl do
+                                        local ok, emNode = pcall(function() return ctrl.emitter end)
+                                        if ok then
+                                            if emNode then
+                                                local entry = findEmitterEntry(emNode)
+                                                if entry then
+                                                    local emitterType = constants.jsonSpecialNodeTypes and constants.jsonSpecialNodeTypes.EMITTER
+                                                    emJsonName = emitterType and entry.jsonName or (emNode.name or "")
+                                                    ed = entry
+                                                end
+                                            end
+                                            local okB, _ = pcall(function() return ctrl.birthRate end)
+                                            if okB and not ed then
+                                                ed = { birthRate = ctrl.birthRate, speed = ctrl.speed, initialSize = ctrl.initialSize }
+                                            end
+                                            break
+                                        end
+                                        ctrl = ctrl.nextController
+                                    end
+                                end
+                                if ed then break end
+                            end
+                        end
+
+                        local extraLines = {}
+                        if emJsonName then
+                            table.insert(extraLines, "    " .. jsonString("emitter") .. ": " .. jsonString(emJsonName) .. ",")
+                        end
+                        if ed then
+                            table.insert(extraLines, "    " .. jsonString("particle_system") .. ": {")
+                            table.insert(extraLines, "      " .. jsonString("birth_rate")   .. ": " .. jsonNumber(ed.birthRate)   .. ",")
+                            table.insert(extraLines, "      " .. jsonString("speed")        .. ": " .. jsonNumber(ed.speed)        .. ",")
+                            table.insert(extraLines, "      " .. jsonString("initial_size") .. ": " .. jsonNumber(ed.initialSize))
+                            table.insert(extraLines, "    }")
+                        end
+                        emitEntry(nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiBSParticleNode]), #extraLines > 0 and extraLines or nil)
+
                     elseif node:isInstanceOfType(tes3.niType.NiLODNode) then
-                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiLODNode])
-                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+                        emitEntry(nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiLODNode]), nil)
+
                     elseif node:isInstanceOfType(tes3.niType.NiPointLight) or
-                       node:isInstanceOfType(tes3.niType.NiSpotLight) then
-                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiPointLight])
+                           node:isInstanceOfType(tes3.niType.NiSpotLight) then
                         local cr = node.diffuse and node.diffuse.r or 1
                         local cg = node.diffuse and node.diffuse.g or 1
                         local cb = node.diffuse and node.diffuse.b or 1
-                        local radius = node.radius or 0
                         local lightJson = table.concat({
                             "{",
-                            "      " .. jsonString("type")             .. ": " .. jsonString("POINT") .. ",",
-                            "      " .. jsonString("color")            .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "]",
+                            "      " .. jsonString("type")  .. ": " .. jsonString("POINT") .. ",",
+                            "      " .. jsonString("color") .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "]",
                             "    }"
                         }, "\n    ")
-                        emitLightEntry(nodeName, parentJsonName, lt, lightJson, jsonType)
+                        emitLightEntry(nodeName, parentJsonName, lt, lightJson, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiPointLight]))
+
                     elseif node:isInstanceOfType(tes3.niType.NiNode) then
-                        jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode])
-                        local meshScale = nil
-                        if node.children then
-                            for _, child in ipairs(node.children) do
-                                if child and (child:isInstanceOfType(tes3.niType.NiTriShape) or
-                                              child:isInstanceOfType(tes3.niType.NiTriStrips)) then
-                                    meshScale = child.scale
-                                    break
+                        local entry = findEmitterEntry(node)
+                        if entry then
+                            local emitterType = constants.jsonSpecialNodeTypes and constants.jsonSpecialNodeTypes.EMITTER
+                            if not emitterType then goto nextNode end
+                            -- Use the pre-assigned name so it matches the PARTICLE_SYSTEM reference.
+                            nodeName = entry.jsonName
+                            nodeJsonNames[tostring(node)] = nodeName
+                            emitEntry(nodeName, parentJsonName, lt, emitterType, nil)
+                        else
+                            local meshScale = nil
+                            if node.children then
+                                for _, child in ipairs(node.children) do
+                                    if child and (child:isInstanceOfType(tes3.niType.NiTriShape) or
+                                                  child:isInstanceOfType(tes3.niType.NiTriStrips)) then
+                                        meshScale = child.scale
+                                        break
+                                    end
                                 end
                             end
+                            if meshScale and meshScale ~= 1 and meshScale ~= (lt.scale or 1) then
+                                lt = { translation = lt.translation, rotation = lt.rotation, scale = meshScale }
+                            end
+                            emitEntry(nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), nil)
                         end
-                        if meshScale and meshScale ~= 1 and meshScale ~= (lt.scale or 1) then
-                            lt = { translation = lt.translation, rotation = lt.rotation, scale = meshScale }
-                        end
-                        emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
-                          elseif node:isInstanceOfType(tes3.niType.NiTriShape) or
-                                    node:isInstanceOfType(tes3.niType.NiTriStrips) then
-                                jsonType = resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiTriShape])
-                                emitEntry(nodeName, parentJsonName, lt, jsonType, nil)
+
+                    elseif node:isInstanceOfType(tes3.niType.NiTriShape) or
+                           node:isInstanceOfType(tes3.niType.NiTriStrips) then
+                        emitEntry(nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiTriShape]), nil)
                     end
 
                     ::nextNode::
@@ -371,6 +475,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
     end
 
     lfs.mkdir(config.exportFolder)
+
     local file, err = io.open(path, "w")
     if not file then
         tes3.messageBox("JSON export failed: %s", err or "unknown error")
