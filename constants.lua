@@ -38,9 +38,13 @@ constants.jsonNodeTypes = {
     [tes3.niType.NiTriStrips] = "MESH",
     [tes3.niType.NiBillboardNode] = "BILLBOARD",
     [tes3.niType.NiLODNode] = "LOD",
-    [tes3.niType.NiBSParticleNode] = "PARTICLE",
+    [tes3.niType.NiBSParticleNode] = "PARTICLE_SYSTEM",
     [tes3.niType.NiSwitchNode] = "SWITCH",
     [tes3.niType.NiNode] = "EMPTY",
+}
+
+constants.jsonSpecialNodeTypes = {
+    EMITTER = "EMITTER",
 }
 
 -- =============================================================================
@@ -66,24 +70,6 @@ constants.objectTypeNames = {
     [tes3.objectType.repairItem] = "Repair Item",
     [tes3.objectType.static] = "Static",
     [tes3.objectType.weapon] = "Weapon",
-}
-
--- =============================================================================
--- ITEM TYPES (PICKABLE)
--- =============================================================================
-constants.itemTypes = {
-    [tes3.objectType.alchemy] = true,
-    [tes3.objectType.ammunition] = true,
-    [tes3.objectType.apparatus] = true,
-    [tes3.objectType.armor] = true,
-    [tes3.objectType.book] = true,
-    [tes3.objectType.clothing] = true,
-    [tes3.objectType.ingredient] = true,
-    [tes3.objectType.lockpick] = true,
-    [tes3.objectType.miscItem] = true,
-    [tes3.objectType.probe] = true,
-    [tes3.objectType.repairItem] = true,
-    [tes3.objectType.weapon] = true,
 }
 
 return constants
