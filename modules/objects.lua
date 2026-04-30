@@ -3,6 +3,8 @@ local objects = {}
 local config = nil
 local utils = require("ExportCells.utils")
 local nifs = require("ExportCells.modules.nifs")
+local jsons = require("ExportCells.modules.jsons")
+
 
 function objects.setConfig(cfg)
     config = cfg
@@ -24,6 +26,7 @@ local function collectObjectsByMeshFolder(folderName)
     local seen = {}
     local searchFolder = string.lower(folderName):gsub("/", "\\")
     searchFolder = searchFolder:gsub("^\\*", ""):gsub("\\*$", "")
+    if searchFolder == "" then searchFolder = "meshes" end
 
     local function check(obj)
         if not obj or not obj.mesh or obj.mesh == "" then return end
@@ -54,50 +57,62 @@ local function collectObjectsByMeshFolder(folderName)
     return results
 end
 
-local function discoverAllUsedFolders(prefix)
+local function discoverAllUsedFolders(query)
     local folderGroups = {}
     local folders = {}
     local allObjects = tes3.dataHandler.nonDynamicData.objects
     if not allObjects then return {}, {} end
 
-    local searchPrefix = prefix and string.lower(prefix):gsub("/", "\\"):gsub("^\\*", ""):gsub("\\*$", "")
+    local searchQuery = query and string.lower(query):gsub("/", "\\"):gsub("^\\*", ""):gsub("\\*$", "")
+    if searchQuery == "" then searchQuery = "meshes" end
+    local modFilter = nil
+    local modFilterOrig = nil
+    if searchQuery and (searchQuery:find("%.esp$") or searchQuery:find("%.esm$")) then
+        modFilter = searchQuery
+        modFilterOrig = query
+        searchQuery = nil
+    end
+
     local skipFolders = {}
 
     for _, obj in pairs(allObjects) do
         if obj and obj.mesh and obj.mesh ~= "" and obj.objectType ~= tes3.objectType.creature then
-            local mesh = string.lower(obj.mesh):gsub("/", "\\")
-            local folder = ""
-            if string.find(mesh, "^meshes\\") then
-                folder = mesh:match("^meshes\\(.+)\\[^\\]+$")
-                if not folder then folder = "meshes" end
-            else
-                folder = mesh:match("^(.+)\\[^\\]+$")
-                if not folder then folder = "meshes" end
-            end
-
-            if folder and not skipFolders[folder] then
-                local include = true
-                if searchPrefix then
-                    if searchPrefix == "meshes" then
-                        include = (folder == "meshes" and not mesh:find("\\"))
-                    elseif folder == searchPrefix then
-                        include = true
-                    elseif string.find(folder, "^" .. searchPrefix .. "\\") then
-                        include = true
-                    else
-                        include = false
-                    end
+            if not modFilter or (obj.sourceMod and obj.sourceMod:lower() == modFilter) then
+                local mesh = string.lower(obj.mesh):gsub("/", "\\")
+                local folder = ""
+                if string.find(mesh, "^meshes\\") then
+                    folder = mesh:match("^meshes\\(.+)\\[^\\]+$")
+                    if not folder then folder = "meshes" end
+                else
+                    folder = mesh:match("^(.+)\\[^\\]+$")
+                    if not folder then folder = "meshes" end
                 end
 
-                if include then
-                    if not folderGroups[folder] then
-                        folderGroups[folder] = {}
-                        table.insert(folders, folder)
+                if folder and not skipFolders[folder] then
+                    local include = true
+                    if searchQuery then
+                        if searchQuery == "meshes" then
+                            include = (folder == "meshes" and not mesh:find("\\"))
+                        elseif folder == searchQuery then
+                            include = true
+                        elseif string.find(folder, "^" .. searchQuery .. "\\") then
+                            include = true
+                        else
+                            include = false
+                        end
                     end
-                    local meshLower = mesh
-                    if not folderGroups[folder][meshLower] then
-                        folderGroups[folder][meshLower] = true
-                        table.insert(folderGroups[folder], obj)
+
+                    if include then
+                        local folderKey = modFilterOrig or folder
+                        if not folderGroups[folderKey] then
+                            folderGroups[folderKey] = {}
+                            table.insert(folders, folderKey)
+                        end
+                        local meshLower = mesh
+                        if not folderGroups[folderKey][meshLower] then
+                            folderGroups[folderKey][meshLower] = true
+                            table.insert(folderGroups[folderKey], obj)
+                        end
                     end
                 end
             end
@@ -110,7 +125,7 @@ local function discoverAllUsedFolders(prefix)
     return folders, folderGroups
 end
 
-local function collectFlaggedObjects()
+local function collectFlaggedObjects(modFilter)
     local fileName = config.flaggedNifsFile or "Flagged nifs.txt"
     lfs.mkdir(config.exportFolder)
     local path = config.exportFolder .. "\\" .. fileName
@@ -128,15 +143,24 @@ local function collectFlaggedObjects()
     end
     file:close()
     
+    local modFilterLower = modFilter and modFilter:lower()
+    if modFilterLower and (modFilterLower:find("%.esp$") or modFilterLower:find("%.esm$")) then
+        -- modFilterLower is already correct
+    else
+        modFilterLower = nil
+    end
+
     local results = {}
     local seen = {}
     local allObjects = tes3.dataHandler.nonDynamicData.objects
     for _, obj in pairs(allObjects) do
         if obj and obj.mesh and obj.mesh ~= "" and obj.objectType ~= tes3.objectType.creature then
-            local mesh = obj.mesh:lower():gsub("/", "\\")
-            if flaggedSet[mesh] and not seen[mesh] then
-                seen[mesh] = true
-                table.insert(results, obj)
+            if not modFilterLower or (obj.sourceMod and obj.sourceMod:lower() == modFilterLower) then
+                local mesh = obj.mesh:lower():gsub("/", "\\")
+                if flaggedSet[mesh] and not seen[mesh] then
+                    seen[mesh] = true
+                    table.insert(results, obj)
+                end
             end
         end
     end
@@ -144,6 +168,7 @@ local function collectFlaggedObjects()
     return results
 end
 
+function objects.collectFlagged(modFilter) return collectFlaggedObjects(modFilter) end
 local function collectObjectsByMod(modName)
     modName = modName:lower():gsub("^%s+", ""):gsub("%s+$", "")
     local results = {}
@@ -269,7 +294,11 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
         end
 
         local function processChunk(chunkIndex)
-            if exportCancelRequestedRef[1] then exportInProgress = false; return end
+            if exportCancelRequestedRef[1] then 
+                exportInProgress = false
+                tes3.messageBox("Export cancelled.")
+                return 
+            end
             if chunkIndex > totalChunks then
                 timer.start({ duration = 0.01, callback = processQueue })
                 return
@@ -292,6 +321,9 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
                     end
                 end
                 local spacing = math.max(128, maxDim + 32)
+                if not config.exportObjectsSpacedOut then
+                    spacing = 0
+                end
                 local rowSize = math.ceil(math.sqrt(#chunkObjects))
                 local count = 0
 
@@ -341,9 +373,9 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
                         fileName = string.format("%s_nifs.nif", baseName)
                     end
                 else
-                    local safeName = folderName:gsub("[^%w]", "_")
+                    local safeName = folderName:gsub("%.es.$", ""):gsub("[^%w]", "_")
                     if totalChunks > 1 then
-                        fileName = string.format("%s_meshes_part%d.nif", safeName, chunkIndex)
+                        fileName = string.format("%s_meshes_part_%d.nif", safeName, chunkIndex)
                     else
                         fileName = string.format("%s_meshes.nif", safeName)
                     end
@@ -352,9 +384,12 @@ function objects.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFo
                 
                 local success, err = pcall(function() root:saveBinary(path) end)
                 if not success then tes3.messageBox("FAILED to save %s: %s", fileName, err) end
+
+                if config.exportObjectJsons then
+                    local jsonPath = path:gsub("%.nif$", ".json")
+                    jsons.exportObjectGroup(folderName, chunkObjects, spacing, rowSize, jsonPath)
+                end
                 
-                -- Collect garbage AFTER saving to prevent MWSE from prematurely freeing C++ pointers 
-                -- (like NiTriShapes shared with collision nodes) before NiStream finishes serializing them.
                 collectgarbage("collect")
 
                 timer.start({ duration = 0.01, callback = function()
@@ -373,9 +408,92 @@ end
 
 
 -- =============================================================================
+-- MASTER RECORD EXPORT
+-- =============================================================================
+function objects.exportMasterRecordList(inputString)
+    if exportInProgress then tes3.messageBox("An export is already in progress."); return end
+    
+    local results = {}
+    local allObjects = tes3.dataHandler.nonDynamicData.objects
+    
+    local modFilter = nil
+    local modFilterLower = nil
+    local startChunk = 1
+    
+    if inputString and inputString ~= "" then
+        local lowerInput = inputString:lower()
+        if lowerInput:find("%.esp$") or lowerInput:find("%.esm$") then
+            modFilter = inputString
+            modFilterLower = lowerInput
+        else
+            startChunk = tonumber(inputString) or 1
+        end
+    end
+    
+    for _, obj in pairs(allObjects) do
+        if obj and obj.mesh and obj.mesh ~= "" and obj.objectType ~= tes3.objectType.creature then
+            if not modFilterLower or (obj.sourceMod and obj.sourceMod:lower() == modFilterLower) then
+                table.insert(results, obj)
+            end
+        end
+    end
+    table.sort(results, function(a,b) return a.id < b.id end)
+    
+    if #results == 0 then
+        if modFilter then
+            tes3.messageBox("No records found for mod: %s", inputString)
+        else
+            tes3.messageBox("No records found with meshes.")
+        end
+        return
+    end
+
+    local MAX = 1000
+    local totalChunks = math.ceil(#results / MAX)
+    exportInProgress = true
+    exportCancelRequestedRef[1] = false
+
+    local function processChunk(chunkIndex)
+        if exportCancelRequestedRef[1] then
+            exportInProgress = false
+            tes3.messageBox("Master record export cancelled.")
+            return
+        end
+        if chunkIndex > totalChunks then
+            exportInProgress = false
+            tes3.messageBox("Master record export completed. (%d records)", #results)
+            return
+        end
+        
+        local startIdx = (chunkIndex - 1) * MAX + 1
+        local endIdx = math.min(chunkIndex * MAX, #results)
+        local chunkObjects = {}
+        for i = startIdx, endIdx do table.insert(chunkObjects, results[i]) end
+        
+        lfs.mkdir(config.exportFolder)
+        local prefix = modFilter and modFilter:gsub("%.es.$", ""):gsub("[^%w]", "_") or "Master_Records"
+        local fileName = string.format("%s_Part_%d.json", prefix, chunkIndex)
+        local path = config.exportFolder .. "\\" .. fileName
+        
+        -- Export at 0,0,0
+        jsons.exportObjectGroup(prefix, chunkObjects, 0, 10, path)
+        
+        tes3.messageBox("Exporting %s: Part %d of %d", prefix, chunkIndex, totalChunks)
+        timer.start({ duration = 0.05, callback = function() processChunk(chunkIndex + 1) end })
+    end
+
+    if startChunk > totalChunks then
+        tes3.messageBox("Part %d exceeds total chunks (%d). Starting from Part 1.", startChunk, totalChunks)
+        startChunk = 1
+    end
+    processChunk(startChunk)
+end
+
+
+-- =============================================================================
 -- UI DISCOVERY
 -- =============================================================================
-function objects.discoverFolders(prefix) return discoverAllUsedFolders(prefix) end
+function objects.discoverFolders(query) return discoverAllUsedFolders(query) end
 function objects.collectFlagged() return collectFlaggedObjects() end
 function objects.collectByMod(name) return collectObjectsByMod(name) end
 function objects.exportLists() exportMeshPathLists() end

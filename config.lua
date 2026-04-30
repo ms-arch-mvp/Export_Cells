@@ -59,6 +59,9 @@ local config = {
     resetAnimation = true,
     nifRenameMeshChildNodes = true,
     flaggedNifsFile = "Flagged nifs.txt",
+    exportObjectJsons = false,
+    exportObjectsSpacedOut = true,
+
 
 
     -- =============================================================================

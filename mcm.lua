@@ -168,6 +168,17 @@ function mcm.registerModConfig()
         variable = mwse.mcm.createTableVariable({ id = "jsonSequentialNaming", table = config })
     })
 
+    toggleGroup:createYesNoButton({
+        label = "Export object JSONs",
+        description = "When exporting objects, also generate a JSON file.",
+        variable = mwse.mcm.createTableVariable({ id = "exportObjectJsons", table = config })
+    })
+
+    toggleGroup:createYesNoButton({
+        label = "Export objects spaced out",
+        description = "When exporting objects, arrange them in a grid. If disabled, all objects will be placed at the origin (0,0,0).",
+        variable = mwse.mcm.createTableVariable({ id = "exportObjectsSpacedOut", table = config })
+    })
 
     -- =============================================================================
     -- CONSOLE TOGGLES PAGE

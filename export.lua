@@ -312,8 +312,8 @@ function export.exportObjectsByMeshFolder(folder)
                 if string.find(string.lower(folderInput), "%.esp$") or string.find(string.lower(folderInput), "%.esm$") then
                     local objs = objectsModule.collectByMod(folderInput)
                     if objs and #objs > 0 then
-                        local map = { ["Mod_" .. folderInput] = objs }
-                        objectsModule.exportObjectsByMeshFolder({ "Mod_" .. folderInput }, map)
+                        local map = { [folderInput] = objs }
+                        objectsModule.exportObjectsByMeshFolder({ folderInput }, map)
                     else
                         tes3.messageBox("No objects found for mod: %s", folderInput)
                     end
@@ -326,13 +326,17 @@ function export.exportObjectsByMeshFolder(folder)
                     end
                 end
             end,
-            onFlagged = function()
-                local objs = objectsModule.collectFlagged()
+            onFlagged = function(modFilter)
+                local objs = objectsModule.collectFlagged(modFilter)
                 if objs and #objs > 0 then
                     local map = { ["Flagged"] = objs }
                     objectsModule.exportObjectsByMeshFolder({"Flagged"}, map)
                 else
-                    tes3.messageBox("No matching objects found in flagged file.")
+                    if modFilter and modFilter ~= "" then
+                        tes3.messageBox("No matching objects found in flagged file for mod: %s", modFilter)
+                    else
+                        tes3.messageBox("No matching objects found in flagged file.")
+                    end
                 end
             end,
             onAllFolders = function(resumeFolder)
@@ -361,12 +365,20 @@ function export.exportObjectsByMeshFolder(folder)
                     tes3.messageBox("No mesh folders found.")
                 end
             end,
+            onAllRecords = function(resumePart)
+                export.exportMasterRecordList(resumePart)
+            end,
             onCancel = function()
                 tes3.messageBox("Export cancelled.")
             end
         })
     end
 end
+
+function export.exportMasterRecordList(resumePart)
+    objectsModule.exportMasterRecordList(resumePart)
+end
+
 export.exportCells = exportCells
 export.export2x2 = export2x2
 export.export3x3 = export3x3

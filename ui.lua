@@ -237,18 +237,19 @@ function ui.createMeshFolderInputDialog(params)
     local onConfirm = params.onConfirm
     local onFlagged = params.onFlagged
     local onAllFolders = params.onAllFolders
+    local onAllRecords = params.onAllRecords
     local onCancel = params.onCancel
 
     local GUI_ID_InputDialog = tes3ui.registerID("ExportObjects:InputDialog")
     local GUI_ID_InputField = tes3ui.registerID("ExportObjects:InputField")
 
     local menu = tes3ui.createMenu({ id = GUI_ID_InputDialog, fixedFrame = true })
-    menu.minWidth = 350
+    menu.minWidth = 500
     menu.minHeight = 120
     menu.autoHeight = true
     menu.autoWidth = true
 
-    local title = menu:createLabel({ text = "Enter mesh folder to search (e.g. 'f' or 'oaab\\f'):" })
+    local title = menu:createLabel({ text = "Search and resume by folder, mod, or part #:" })
     title.borderBottom = 15
 
     local inputBlock = menu:createBlock()
@@ -278,9 +279,10 @@ function ui.createMeshFolderInputDialog(params)
     local flaggedButton = buttonBlock:createButton({ text = "Flagged" })
     flaggedButton.borderRight = 10
     flaggedButton:register("mouseClick", function()
+        local inputString = input.text:gsub("^%s+", ""):gsub("%s+$", "")
         menu:destroy()
         tes3ui.leaveMenuMode()
-        if onFlagged then onFlagged() end
+        if onFlagged then onFlagged(inputString) end
     end)
 
     local batchButton = buttonBlock:createButton({ text = "All Folders" })
@@ -290,6 +292,15 @@ function ui.createMeshFolderInputDialog(params)
         menu:destroy()
         tes3ui.leaveMenuMode()
         if onAllFolders then onAllFolders(inputString) end
+    end)
+
+    local recordsButton = buttonBlock:createButton({ text = "All Records" })
+    recordsButton.borderRight = 10
+    recordsButton:register("mouseClick", function()
+        local inputString = input.text:gsub("^%s+", ""):gsub("%s+$", "")
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onAllRecords then onAllRecords(inputString) end
     end)
 
     local cancelButton = buttonBlock:createButton({ text = "Cancel" })
