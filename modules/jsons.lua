@@ -262,7 +262,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
             goto nextNode
         end
 
-        if config.jsonSelectiveChildNodesOnly and isLight and not selectedAncestors[tostring(node)] then
+        if config.jsonSelectiveChildNodesOnly and isLight and not selectedAncestors[tostring(node)] and node.name ~= "AttachLight" then
             goto nextNode
         end
 
