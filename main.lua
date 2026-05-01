@@ -132,6 +132,14 @@ local function onKeyDownR(e)
     end
 end
 
+-- Ctrl+9: Export Records (Opens UI Menu)
+local function onKeyDown9(e)
+    if tes3ui.menuMode() then return end
+    if e.isControlDown then
+        export.promptExportRecords()
+    end
+end
+
 -- Shift+0: Export Objects By Mesh Folder (Opens UI Menu)
 local function onKeyDown0(e)
     if tes3ui.menuMode() then return end
@@ -172,6 +180,7 @@ event.register("keyDown", onKeyDownE, { filter = tes3.scanCode.e })
 event.register("keyDown", onKeyDown1, { filter = tes3.scanCode["1"] })
 event.register("keyDown", onKeyDown2, { filter = tes3.scanCode["2"] })
 event.register("keyDown", onKeyDown3, { filter = tes3.scanCode["3"] })
+event.register("keyDown", onKeyDown9, { filter = tes3.scanCode["9"] })
 event.register("keyDown", onKeyDown0, { filter = tes3.scanCode["0"] })
 event.register("keyDown", onKeyDownR, { filter = tes3.scanCode.r })
 event.register("keyDown", onKeyDownC, { filter = tes3.scanCode.c })

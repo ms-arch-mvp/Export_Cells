@@ -8,7 +8,8 @@ local charactersModule = require("ExportCells.modules.characters")
 local interiorsModule = require("ExportCells.modules.interiors")
 local jsonModule = require("ExportCells.modules.jsons")
 local nifsModule = require("ExportCells.modules.nifs")
-local objectsModule = require("ExportCells.modules.objects")
+local meshesModule = require("ExportCells.modules.meshes")
+local recordsModule = require("ExportCells.modules.records")
 local reportsModule = require("ExportCells.modules.reports")
 
 local ui = require("ExportCells.ui")
@@ -30,7 +31,8 @@ function export.setConfig(cfg)
     interiorsModule.setConfig(cfg)
     jsonModule.setConfig(cfg)
     nifsModule.setConfig(cfg)
-    objectsModule.setConfig(cfg)
+    meshesModule.setConfig(cfg)
+    recordsModule.setConfig(cfg)
     reportsModule.setConfig(cfg)
 
     utils.setConfig(cfg)
@@ -40,7 +42,8 @@ function export.setCancelRef(ref)
     exportCancelRequestedRef = ref or exportCancelRequestedRef
     
     interiorsModule.setCancelRef(exportCancelRequestedRef)
-    objectsModule.setCancelRef(exportCancelRequestedRef)
+    meshesModule.setCancelRef(exportCancelRequestedRef)
+    recordsModule.setCancelRef(exportCancelRequestedRef)
     teleport.setCancelRef(exportCancelRequestedRef)
 end
 
@@ -301,36 +304,36 @@ end
 
 -- Misc
 function export.isInProgress() 
-    return exportInProgress or objectsModule.isInProgress()
+    return exportInProgress or meshesModule.isInProgress() or recordsModule.isInProgress()
 end
 function export.exportObjectsByMeshFolder(folder)
     if folder then
-        objectsModule.exportObjectsByMeshFolder(folder)
+        meshesModule.exportObjectsByMeshFolder(folder)
     else
         ui.createMeshFolderInputDialog({
             onConfirm = function(folderInput)
                 if string.find(string.lower(folderInput), "%.esp$") or string.find(string.lower(folderInput), "%.esm$") then
-                    local objs = objectsModule.collectByMod(folderInput)
+                    local objs = meshesModule.collectByMod(folderInput)
                     if objs and #objs > 0 then
                         local map = { [folderInput] = objs }
-                        objectsModule.exportObjectsByMeshFolder({ folderInput }, map)
+                        meshesModule.exportObjectsByMeshFolder({ folderInput }, map)
                     else
                         tes3.messageBox("No objects found for mod: %s", folderInput)
                     end
                 else
-                    local f, groups = objectsModule.discoverFolders(folderInput)
+                    local f, groups = meshesModule.discoverFolders(folderInput)
                     if f and #f > 0 then
-                        objectsModule.exportObjectsByMeshFolder(f, groups)
+                        meshesModule.exportObjectsByMeshFolder(f, groups)
                     else
                         tes3.messageBox("No matching folders found.")
                     end
                 end
             end,
             onFlagged = function(modFilter)
-                local objs = objectsModule.collectFlagged(modFilter)
+                local objs = meshesModule.collectFlagged(modFilter)
                 if objs and #objs > 0 then
-                    local map = { ["Flagged"] = objs }
-                    objectsModule.exportObjectsByMeshFolder({"Flagged"}, map)
+                    local map = { ["Flagged_meshes"] = objs }
+                    meshesModule.exportObjectsByMeshFolder({"Flagged_meshes"}, map)
                 else
                     if modFilter and modFilter ~= "" then
                         tes3.messageBox("No matching objects found in flagged file for mod: %s", modFilter)
@@ -340,8 +343,8 @@ function export.exportObjectsByMeshFolder(folder)
                 end
             end,
             onAllFolders = function(resumeFolder)
-                objectsModule.exportLists()
-                local folders, groups = objectsModule.discoverFolders()
+                meshesModule.exportLists()
+                local folders, groups = meshesModule.discoverFolders()
                 if folders and #folders > 0 then
                     if resumeFolder and resumeFolder ~= "" then
                         local queued = {}
@@ -353,30 +356,43 @@ function export.exportObjectsByMeshFolder(folder)
                             end
                         end
                         if found then
-                            objectsModule.exportObjectsByMeshFolder(queued, groups)
+                            meshesModule.exportObjectsByMeshFolder(queued, groups)
                         else
                             tes3.messageBox("Folder '%s' not found. Exporting all.", resumeFolder)
-                            objectsModule.exportObjectsByMeshFolder(folders, groups)
+                            meshesModule.exportObjectsByMeshFolder(folders, groups)
                         end
                     else
-                        objectsModule.exportObjectsByMeshFolder(folders, groups)
+                        meshesModule.exportObjectsByMeshFolder(folders, groups)
                     end
                 else
                     tes3.messageBox("No mesh folders found.")
                 end
             end,
-            onAllRecords = function(resumePart)
-                export.exportMasterRecordList(resumePart)
-            end,
             onCancel = function()
-                tes3.messageBox("Export cancelled.")
             end
         })
     end
 end
 
+function export.promptExportRecords()
+    if export.isInProgress() then
+        tes3.messageBox("An export is already in progress.")
+        return
+    end
+    ui.createRecordInputDialog({
+        onConfirm = function(inputString)
+            recordsModule.exportModRecords(inputString)
+        end,
+        onAllRecords = function(resumePart)
+            recordsModule.exportAllRecords(resumePart)
+        end,
+        onCancel = function()
+        end
+    })
+end
+
 function export.exportMasterRecordList(resumePart)
-    objectsModule.exportMasterRecordList(resumePart)
+    recordsModule.exportMasterRecordList(resumePart)
 end
 
 export.exportCells = exportCells

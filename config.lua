@@ -58,11 +58,9 @@ local config = {
     interiorGarbageCollection = true,
     resetAnimation = true,
     nifRenameMeshChildNodes = true,
-    flaggedNifsFile = "Flagged nifs.txt",
-    exportObjectJsons = false,
-    exportObjectsSpacedOut = true,
-
-
+    flaggedMeshesFile = "Flagged meshes.txt",
+    exportMeshesWithJson = false,
+    exportMeshesSpacedOut = true,
 
     -- =============================================================================
     -- JSONS

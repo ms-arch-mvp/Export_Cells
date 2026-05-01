@@ -237,7 +237,6 @@ function ui.createMeshFolderInputDialog(params)
     local onConfirm = params.onConfirm
     local onFlagged = params.onFlagged
     local onAllFolders = params.onAllFolders
-    local onAllRecords = params.onAllRecords
     local onCancel = params.onCancel
 
     local GUI_ID_InputDialog = tes3ui.registerID("ExportObjects:InputDialog")
@@ -249,7 +248,7 @@ function ui.createMeshFolderInputDialog(params)
     menu.autoHeight = true
     menu.autoWidth = true
 
-    local title = menu:createLabel({ text = "Search and resume by folder, mod, or part #:" })
+    local title = menu:createLabel({ text = "Export meshes:" })
     title.borderBottom = 15
 
     local inputBlock = menu:createBlock()
@@ -294,13 +293,67 @@ function ui.createMeshFolderInputDialog(params)
         if onAllFolders then onAllFolders(inputString) end
     end)
 
-    local recordsButton = buttonBlock:createButton({ text = "All Records" })
-    recordsButton.borderRight = 10
-    recordsButton:register("mouseClick", function()
+
+
+    local cancelButton = buttonBlock:createButton({ text = "Cancel" })
+    cancelButton:register("mouseClick", function()
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onCancel then onCancel() end
+    end)
+
+    menu:updateLayout()
+    tes3ui.enterMenuMode(GUI_ID_InputDialog)
+    tes3ui.acquireTextInput(input)
+end
+
+function ui.createRecordInputDialog(params)
+    local onConfirm = params.onConfirm
+    local onCancel = params.onCancel
+
+    local GUI_ID_InputDialog = tes3ui.registerID("ExportRecords:InputDialog")
+    local GUI_ID_InputField = tes3ui.registerID("ExportRecords:InputField")
+
+    local menu = tes3ui.createMenu({ id = GUI_ID_InputDialog, fixedFrame = true })
+    menu.minWidth = 500
+    menu.minHeight = 120
+    menu.autoHeight = true
+    menu.autoWidth = true
+
+    local title = menu:createLabel({ text = "Export records:" })
+    title.borderBottom = 15
+
+    local inputBlock = menu:createBlock()
+    inputBlock.autoHeight = true
+    inputBlock.widthProportional = 1.0
+
+    local input = inputBlock:createTextInput({ id = GUI_ID_InputField })
+    input.widthProportional = 1.0
+    input.height = 30
+    input.borderAllSides = 5
+
+    local buttonBlock = menu:createBlock()
+    buttonBlock.widthProportional = 1.0
+    buttonBlock.autoHeight = true
+    buttonBlock.childAlignX = 1.0
+    buttonBlock.borderTop = 20
+
+    local okButton = buttonBlock:createButton({ text = "OK" })
+    okButton.borderRight = 10
+    okButton:register("mouseClick", function()
         local inputString = input.text:gsub("^%s+", ""):gsub("%s+$", "")
         menu:destroy()
         tes3ui.leaveMenuMode()
-        if onAllRecords then onAllRecords(inputString) end
+        if onConfirm then onConfirm(inputString) end
+    end)
+
+    local allRecordsButton = buttonBlock:createButton({ text = "All Records" })
+    allRecordsButton.borderRight = 10
+    allRecordsButton:register("mouseClick", function()
+        local inputString = input.text:gsub("^%s+", ""):gsub("%s+$", "")
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if params.onAllRecords then params.onAllRecords(inputString) end
     end)
 
     local cancelButton = buttonBlock:createButton({ text = "Cancel" })
