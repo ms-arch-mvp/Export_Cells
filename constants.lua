@@ -38,8 +38,8 @@ constants.jsonNodeTypes = {
     [tes3.niType.NiBSParticleNode] = "PARTICLE_SYSTEM",
     [tes3.niType.NiTriShape] = "MESH",
     [tes3.niType.NiTriStrips] = "MESH",
-    [tes3.niType.NiPointLight] = "LIGHT",
-    [tes3.niType.NiSpotLight] = "LIGHT",
+    [tes3.niType.NiPointLight] = "POINTLIGHT",
+    [tes3.niType.NiSpotLight] = "SPOTLIGHT",
     [tes3.niType.NiBillboardNode] = "BILLBOARD",
 }
 

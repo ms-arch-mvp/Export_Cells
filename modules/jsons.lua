@@ -331,18 +331,27 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
         elseif node:isInstanceOfType(tes3.niType.NiLODNode) then
             jsons.emitEntry(context, nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiLODNode]), nil)
 
-        elseif node:isInstanceOfType(tes3.niType.NiPointLight) or
-               node:isInstanceOfType(tes3.niType.NiSpotLight) then
+        elseif node:isInstanceOfType(tes3.niType.NiPointLight) then
             local cr = node.diffuse and node.diffuse.r or 1
             local cg = node.diffuse and node.diffuse.g or 1
             local cb = node.diffuse and node.diffuse.b or 1
             local lightJson = table.concat({
                 "{",
-                "      " .. jsonString("type")  .. ": " .. jsonString("POINT") .. ",",
                 "      " .. jsonString("color") .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "]",
                 "    }"
             }, "\n    ")
             jsons.emitLightEntry(context, nodeName, parentJsonName, lt, lightJson, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiPointLight]))
+
+        elseif node:isInstanceOfType(tes3.niType.NiSpotLight) then
+            local cr = node.diffuse and node.diffuse.r or 1
+            local cg = node.diffuse and node.diffuse.g or 1
+            local cb = node.diffuse and node.diffuse.b or 1
+            local lightJson = table.concat({
+                "{",
+                "      " .. jsonString("color") .. ": [" .. jsonNumber(cr) .. ", " .. jsonNumber(cg) .. ", " .. jsonNumber(cb) .. "]",
+                "    }"
+            }, "\n    ")
+            jsons.emitLightEntry(context, nodeName, parentJsonName, lt, lightJson, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiSpotLight]))
 
         elseif node:isInstanceOfType(tes3.niType.NiNode) then
             local entry = findEmitterEntry(node)
