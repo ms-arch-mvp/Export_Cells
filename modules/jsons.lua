@@ -172,8 +172,18 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
 
     jsons.emitEntry(context, instName, parentName, rootTransform, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), fieldLines)
 
-    -- Non-light instances: no child nodes are used by the importer, skip traversal.
-    if config.jsonSelectiveChildNodesOnly and not isLight then return end
+    -- Non-light instances: skip child traversal unless they contain particle nodes.
+    local hasParticleNodes = false
+    if config.jsonSelectiveChildNodesOnly and not isLight then
+        local clonedCheck = sceneNode:clone()
+        for node in table.traverse({clonedCheck}) do
+            if node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
+                hasParticleNodes = true
+                break
+            end
+        end
+        if not hasParticleNodes then return end
+    end
 
     local nodeJsonNames = {}
     nodeJsonNames[tostring(cloned)] = instName
@@ -192,7 +202,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
         local isLightNode = node:isInstanceOfType(tes3.niType.NiPointLight) or
                             node:isInstanceOfType(tes3.niType.NiSpotLight)
 
-        if isLight and (isLightNode or isParticle) then
+        if isLightNode or isParticle then
             selectedAncestors[tostring(node)] = true
             local p = node.parent
             while p and tostring(p) ~= tostring(cloned) do
@@ -216,13 +226,11 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
                                     speed        = ctrl.speed,
                                     initialSize  = ctrl.initialSize,
                                 })
-                                if isLight then
-                                    selectedAncestors[tostring(emNode)] = true
-                                    local ep = emNode.parent
-                                    while ep and tostring(ep) ~= tostring(cloned) do
-                                        selectedAncestors[tostring(ep)] = true
-                                        ep = ep.parent
-                                    end
+                                selectedAncestors[tostring(emNode)] = true
+                                local ep = emNode.parent
+                                while ep and tostring(ep) ~= tostring(cloned) do
+                                    selectedAncestors[tostring(ep)] = true
+                                    ep = ep.parent
                                 end
                             end
                             break
@@ -262,7 +270,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
             goto nextNode
         end
 
-        if config.jsonSelectiveChildNodesOnly and isLight and not selectedAncestors[tostring(node)] and node.name ~= "AttachLight" then
+        if config.jsonSelectiveChildNodesOnly and (isLight or hasParticleNodes) and not selectedAncestors[tostring(node)] and node.name ~= "AttachLight" then
             goto nextNode
         end
 
