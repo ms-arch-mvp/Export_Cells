@@ -361,23 +361,23 @@ function meshes.exportObjectsByMeshFolder(targetFolder, folderDataMap, resumeFol
                 local fileName
                 if folderName == "Flagged_meshes" or folderName == "Flagged" then
                     if totalChunks > 1 then
-                        fileName = string.format("Flagged_meshes_part%d.nif", chunkIndex)
+                        fileName = string.format("Flagged meshes part%d.nif", chunkIndex)
                     else
-                        fileName = "Flagged_meshes.nif"
+                        fileName = "Flagged meshes.nif"
                     end
                 elseif folderName:find("_plugin$") then
                     local baseName = folderName:gsub("_plugin$", "")
                     if totalChunks > 1 then
-                        fileName = string.format("%s_meshes_part%d.nif", baseName, chunkIndex)
+                        fileName = string.format("%s meshes part%d.nif", baseName, chunkIndex)
                     else
-                        fileName = string.format("%s_meshes.nif", baseName)
+                        fileName = string.format("%s meshes.nif", baseName)
                     end
                 else
                     local safeName = folderName:gsub("%.es.$", ""):gsub("[^%w]", "_")
                     if totalChunks > 1 then
-                        fileName = string.format("%s_meshes_part_%d.nif", safeName, chunkIndex)
+                        fileName = string.format("%s meshes part %d.nif", safeName, chunkIndex)
                     else
-                        fileName = string.format("%s_meshes.nif", safeName)
+                        fileName = string.format("%s meshes.nif", safeName)
                     end
                 end
                 local path = config.exportFolder .. "\\" .. fileName

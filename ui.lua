@@ -103,7 +103,7 @@ local function createBaseGridMenu(params)
                 safeMenuDestroy(menu)
                 tes3ui.leaveMenuMode()
                 teleport.tryTeleportToCell(centerX, centerY, tes3.player.position.z)
-                tes3.messageBox("Teleported to landmass center: %d, %d", centerX, centerY)
+                tes3.messageBox("Teleported to landmass center: %d,%d", centerX, centerY)
             end)
         end
     end

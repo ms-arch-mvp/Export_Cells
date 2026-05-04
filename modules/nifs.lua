@@ -137,20 +137,20 @@ function nifs.export(regionCells, exportMode, currentIndex, totalCount)
     end
 
     local cell = tes3.player.cell
-    local cellName = (cell.id):gsub("%s+", "_"):gsub(":", "-")
+    local cellName = cell.id
     local coords = ""
     if not cell.isInterior then
-        coords = string.format("%d_%d_", cell.gridX, cell.gridY)
+        coords = string.format("%d,%d ", cell.gridX, cell.gridY)
     end
 
     local modeSuffix = ""
     if exportMode == constants.EXPORT_MODE.EXCLUDE_LANDSCAPE then
-        modeSuffix = "_no_landscape"
+        modeSuffix = " no landscape"
     elseif exportMode == constants.EXPORT_MODE.LANDSCAPE_ONLY then
-        modeSuffix = "_landscape"
+        modeSuffix = " landscape"
     elseif exportMode == constants.EXPORT_MODE.LAYER then
         local typeName = constants.objectTypeNames[config.exportLayerType] or "Layer"
-        modeSuffix = "_" .. typeName:gsub("%s+", "_")
+        modeSuffix = " " .. typeName
     end
 
     lfs.mkdir(config.exportFolder)

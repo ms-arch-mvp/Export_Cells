@@ -403,10 +403,11 @@ function jsons.export(regionCells, currentIndex, totalCount)
     local entries = {}
 
     local cell        = tes3.player.cell
-    local cellName    = (cell.id):gsub("%s+", "_"):gsub(":", "-")
+    --local cellName    = (cell.id):gsub("%s+", "_"):gsub(":", "-")
+    local cellName    = cell.id
     local coords      = ""
     if not cell.isInterior then
-        coords = string.format("%d_%d_", cell.gridX, cell.gridY)
+        coords = string.format("%d,%d ", cell.gridX, cell.gridY)
     end
 
     local suffix = ""
@@ -516,7 +517,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
     file:close()
 
     local shortName = coords .. cellName .. suffix .. ".json"
-    tes3.messageBox("JSON Exported: %s\n(%d of %d)", shortName, currentIndex or 1, totalCount or 1)
+    tes3.messageBox("JSON exported: %s\n(%d of %d)", shortName, currentIndex or 1, totalCount or 1)
 end
 
 function jsons.exportObjectGroup(folderName, objects, spacing, rowSize, path)
