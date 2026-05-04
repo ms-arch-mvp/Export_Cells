@@ -4,7 +4,7 @@ local constants = {}
 -- EXPORT MODES
 -- =============================================================================
 constants.EXPORT_MODE = {
-    EVERYTHING = "everything",
+    STANDARD = "standard",
     LANDSCAPE_ONLY = "landscape_only",
     EXCLUDE_LANDSCAPE = "exclude_landscape",
     LAYER = "layer",

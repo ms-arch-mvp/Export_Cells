@@ -33,10 +33,10 @@ function interiors.exportInteriorsFromSameMod(gridType)
         return
     end
 
-    local exportMode = config.defaultExportModes and config.defaultExportModes[gridType] or constants.EXPORT_MODE.EVERYTHING
+    local exportMode = config.defaultExportModes and config.defaultExportModes[gridType] or constants.EXPORT_MODE.STANDARD
 
-    -- For interiors, preserve JSON mode if selected, otherwise fallback to EVERYTHING
-    local interiorExportMode = constants.EXPORT_MODE.EVERYTHING
+    -- For interiors, preserve JSON mode if selected, otherwise fallback to STANDARD
+    local interiorExportMode = constants.EXPORT_MODE.STANDARD
     if exportMode == constants.EXPORT_MODE.DISABLED then
         interiorExportMode = constants.EXPORT_MODE.DISABLED
     elseif exportMode == constants.EXPORT_MODE.JSON then

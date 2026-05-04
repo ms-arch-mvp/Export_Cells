@@ -32,7 +32,7 @@ function ui.getModeText(exportMode)
     elseif exportMode == constants.EXPORT_MODE.DISABLED then
         return " (Export Disabled)"
     else
-        return " (Everything)"
+        return " (Standard)"
     end
 end
 

@@ -29,7 +29,7 @@ function mcm.registerModConfig()
     })
 
     local exportModes = {
-        { label = "Everything", value = constants.EXPORT_MODE.EVERYTHING },
+        { label = "Standard", value = constants.EXPORT_MODE.STANDARD },
         { label = "Landscape Only", value = constants.EXPORT_MODE.LANDSCAPE_ONLY },
         { label = "Exclude Landscape", value = constants.EXPORT_MODE.EXCLUDE_LANDSCAPE },
         { label = "Layer", value = constants.EXPORT_MODE.LAYER },
