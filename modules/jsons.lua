@@ -153,22 +153,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
 
     local cloned = sceneNode:clone()
     local wt = transformOverride or sceneNode.worldTransform
-    local rootTransform
-    if isLight then
-        rootTransform = wt
-        for child in table.traverse({cloned}) do
-            if child:isInstanceOfType(tes3.niType.NiTriShape) or
-               child:isInstanceOfType(tes3.niType.NiTriStrips) then
-                local s = child.scale or 1
-                if s ~= 1 then
-                    rootTransform = { translation = wt.translation, rotation = wt.rotation, scale = s }
-                end
-                break
-            end
-        end
-    else
-        rootTransform = { translation = wt.translation, rotation = wt.rotation, scale = cloned.scale or 1 }
-    end
+    local rootTransform = wt
 
     jsons.emitEntry(context, instName, parentName, rootTransform, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), fieldLines)
 
@@ -370,19 +355,6 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
                 nodeJsonNames[tostring(node)] = nodeName
                 jsons.emitEntry(context, nodeName, parentJsonName, lt, emitterType, nil)
             else
-                local meshScale = nil
-                if node.children then
-                    for _, child in ipairs(node.children) do
-                        if child and (child:isInstanceOfType(tes3.niType.NiTriShape) or
-                                      child:isInstanceOfType(tes3.niType.NiTriStrips)) then
-                            meshScale = child.scale
-                            break
-                        end
-                    end
-                end
-                if meshScale and meshScale ~= 1 and meshScale ~= (lt.scale or 1) then
-                    lt = { translation = lt.translation, rotation = lt.rotation, scale = meshScale }
-                end
                 jsons.emitEntry(context, nodeName, parentJsonName, lt, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), nil)
             end
 
