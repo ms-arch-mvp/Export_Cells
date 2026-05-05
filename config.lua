@@ -51,13 +51,14 @@ local config = {
         tes3.objectType.weapon,
     },
 
-    exportHidden = false,
     cleanExports = false,
+    exportHidden = false,
     exportReports = true,
     exportEmptyLandmassCells = true,
     interiorGarbageCollection = true,
-    resetAnimation = true,
     nifRenameMeshChildNodes = true,
+    resetAnimation = true,
+    
     flaggedMeshesFile = "Flagged meshes.txt",
     exportMeshesWithJson = false,
     exportMeshesSpacedOut = true,
