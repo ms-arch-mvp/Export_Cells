@@ -169,14 +169,14 @@ function mcm.registerModConfig()
     })
 
     toggleGroup:createYesNoButton({
-        label = "Export Mesh JSONs alongside NIFs",
-        description = "When exporting objects, also generate a JSON file.",
+        label = "Meshes: Export JSONs With NIFs",
+        description = "When exporting meshes, also generate a JSON file.",
         variable = mwse.mcm.createTableVariable({ id = "exportMeshesWithJson", table = config })
     })
 
     toggleGroup:createYesNoButton({
-        label = "Space out meshes in grid (false spawns all at 0,0,0)",
-        description = "When exporting objects, arrange them in a grid. If disabled, all objects will be placed at the origin (0,0,0).",
+        label = "Meshes: Spaced Out In Grid",
+        description = "When exporting meshes, arrange them in a grid. If disabled, all objects will be placed at the origin (0,0,0).",
         variable = mwse.mcm.createTableVariable({ id = "exportMeshesSpacedOut", table = config })
     })
 
