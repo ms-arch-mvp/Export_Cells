@@ -188,10 +188,10 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
                             node:isInstanceOfType(tes3.niType.NiSpotLight)
 
         if isLightNode or isParticle then
-            selectedAncestors[tostring(node)] = true
+            selectedAncestors[node.name or ""] = true
             local p = node.parent
-            while p and tostring(p) ~= tostring(cloned) do
-                selectedAncestors[tostring(p)] = true
+            while p and p ~= cloned do
+                selectedAncestors[p.name or ""] = true
                 p = p.parent
             end
         end
@@ -211,10 +211,9 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
                                     speed        = ctrl.speed,
                                     initialSize  = ctrl.initialSize,
                                 })
-                                selectedAncestors[tostring(emNode)] = true
-                                local ep = emNode.parent
+                                local ep = emNode
                                 while ep and tostring(ep) ~= tostring(cloned) do
-                                    selectedAncestors[tostring(ep)] = true
+                                    selectedAncestors[ep.name or ""] = true
                                     ep = ep.parent
                                 end
                             end
@@ -245,17 +244,17 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
     end
 
     for node in table.traverse({cloned}) do
-        if tostring(node) == tostring(cloned) then goto nextNode end
+        if node == cloned then goto nextNode end
         if not node.parent then goto nextNode end
 
-        local parentJsonName = nodeJsonNames[tostring(node.parent)]
+        local parentJsonName = node.parent == cloned and instName or nodeJsonNames[tostring(node.parent)]
         if not parentJsonName then goto nextNode end
 
         if node:isInstanceOfType(tes3.niType.RootCollisionNode) then
             goto nextNode
         end
 
-        if config.jsonSelectiveChildNodesOnly and (isLight or hasParticleNodes) and not selectedAncestors[tostring(node)] and node.name ~= "AttachLight" then
+        if config.jsonSelectiveChildNodesOnly and (isLight or hasParticleNodes) and not selectedAncestors[node.name or ""] and node.name ~= "AttachLight" then
             goto nextNode
         end
 
@@ -366,6 +365,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
         ::nextNode::
     end
 end
+
 
 -- =============================================================================
 -- EXPORT EXECUTION
