@@ -125,9 +125,9 @@ local function writeExteriorsTxt(cell, gridType, exportMode, size)
         if file then
             local cellNameStr = ""
             if cell.id and cell.id ~= "" then
-                cellNameStr = string.format("%d, %d %s", cell.gridX, cell.gridY, cell.id)
+                cellNameStr = string.format("%d,%d %s", cell.gridX, cell.gridY, cell.id)
             else
-                cellNameStr = string.format("%d, %d Wilderness", cell.gridX, cell.gridY)
+                cellNameStr = string.format("%d,%d Wilderness", cell.gridX, cell.gridY)
             end
             local extentStr = "N/A"
             if size == "Landmass" then
