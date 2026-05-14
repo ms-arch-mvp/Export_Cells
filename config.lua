@@ -76,6 +76,7 @@ local config = {
         "can_carry",
         "mesh",
         "script",
+        "destination",
     },
 
     jsonSelectiveChildNodesOnly = true,
