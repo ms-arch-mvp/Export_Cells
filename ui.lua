@@ -102,7 +102,11 @@ local function createBaseGridMenu(params)
             teleportButton:register("mouseClick", function()
                 safeMenuDestroy(menu)
                 tes3ui.leaveMenuMode()
-                teleport.tryTeleportToCell(centerX, centerY, tes3.player.position.z)
+                teleport.tryTeleportToCell(centerX, centerY, tes3.player.position.z, function(cancelled)
+                    if not cancelled and config.runConsoleCustomCommands then
+                        utils.executeConsoleFile()
+                    end
+                end)
                 tes3.messageBox("Teleported to landmass center: %d,%d", centerX, centerY)
             end)
         end
@@ -293,8 +297,6 @@ function ui.createMeshFolderInputDialog(params)
         if onAllFolders then onAllFolders(inputString) end
     end)
 
-
-
     local cancelButton = buttonBlock:createButton({ text = "Cancel" })
     cancelButton:register("mouseClick", function()
         menu:destroy()
@@ -307,7 +309,7 @@ function ui.createMeshFolderInputDialog(params)
     tes3ui.acquireTextInput(input)
 end
 
-function ui.createRecordInputDialog(params)
+function ui.createRecordsInputDialog(params)
     local onConfirm = params.onConfirm
     local onCancel = params.onCancel
 
@@ -368,11 +370,72 @@ function ui.createRecordInputDialog(params)
     tes3ui.acquireTextInput(input)
 end
 
+function ui.createScriptsInputDialog(params)
+    local onConfirm = params.onConfirm
+    local onCancel = params.onCancel
+
+    local GUI_ID_InputDialog = tes3ui.registerID("ExportScripts:InputDialog")
+    local GUI_ID_InputField = tes3ui.registerID("ExportScripts:InputField")
+
+    local menu = tes3ui.createMenu({ id = GUI_ID_InputDialog, fixedFrame = true })
+    menu.minWidth = 500
+    menu.minHeight = 120
+    menu.autoHeight = true
+    menu.autoWidth = true
+
+    local title = menu:createLabel({ text = "Export scripts from mod (.esp/.esm):" })
+    title.borderBottom = 15
+
+    local inputBlock = menu:createBlock()
+    inputBlock.autoHeight = true
+    inputBlock.widthProportional = 1.0
+
+    local input = inputBlock:createTextInput({ id = GUI_ID_InputField })
+    input.widthProportional = 1.0
+    input.height = 30
+    input.borderAllSides = 5
+
+    local buttonBlock = menu:createBlock()
+    buttonBlock.widthProportional = 1.0
+    buttonBlock.autoHeight = true
+    buttonBlock.childAlignX = 1.0
+    buttonBlock.borderTop = 20
+
+    local okButton = buttonBlock:createButton({ text = "OK" })
+    okButton.borderRight = 10
+    okButton:register("mouseClick", function()
+        local inputString = input.text:gsub("^%s+", ""):gsub("%s+$", "")
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onConfirm then onConfirm(inputString) end
+    end)
+
+    local allScriptsButton = buttonBlock:createButton({ text = "All Scripts" })
+    allScriptsButton.borderRight = 10
+    allScriptsButton:register("mouseClick", function()
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if params.onAllScripts then params.onAllScripts() end
+    end)
+
+    local cancelButton = buttonBlock:createButton({ text = "Cancel" })
+    cancelButton:register("mouseClick", function()
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onCancel then onCancel() end
+    end)
+
+    menu:updateLayout()
+    tes3ui.enterMenuMode(GUI_ID_InputDialog)
+    tes3ui.acquireTextInput(input)
+end
+
+
 -- =============================================================================
--- REPORTS
+-- WINDOWS
 -- =============================================================================
 
-function ui.showReportWindow(title, lines)
+function ui.showReportsWindow(title, lines)
     local menuId = "ExportCells_ReportWindow"
     local existing = tes3ui.findMenu(menuId)
     if existing then safeMenuDestroy(existing) end

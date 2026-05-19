@@ -181,35 +181,41 @@ function mcm.registerModConfig()
     })
 
     -- =============================================================================
-    -- CONSOLE TOGGLES PAGE
+    -- CONSOLE COMMANDS PAGE
     -- =============================================================================
     local consolePage = template:createSideBarPage({
-        label = "Console Toggles",
+        label = "Console Commands",
         description = "Configure which console commands are applied during export."
     })
 
     consolePage:createYesNoButton({
         label = "Auto-Manage God Mode (tgm)",
         description = "Automatically manages God Mode while exporting or traversing.",
-        variable = mwse.mcm.createTableVariable({ id = "tgm", table = config.exportConsoleToggles })
+        variable = mwse.mcm.createTableVariable({ id = "tgm", table = config.consoleToggles })
     })
 
     consolePage:createYesNoButton({
         label = "Auto-Manage AI (tai)",
         description = "Automatically manages NPC AI while exporting or traversing.",
-        variable = mwse.mcm.createTableVariable({ id = "tai", table = config.exportConsoleToggles })
+        variable = mwse.mcm.createTableVariable({ id = "tai", table = config.consoleToggles })
     })
 
     consolePage:createYesNoButton({
         label = "Auto-Manage Collision (tcl)",
         description = "Automatically manages collision while exporting or traversing.",
-        variable = mwse.mcm.createTableVariable({ id = "tcl", table = config.exportConsoleToggles })
+        variable = mwse.mcm.createTableVariable({ id = "tcl", table = config.consoleToggles })
     })
 
     consolePage:createYesNoButton({
         label = "Disable Vanity Mode",
         description = "Automatically manages vanity camera while exporting or traversing.",
-        variable = mwse.mcm.createTableVariable({ id = "disablevanitymode", table = config.exportConsoleToggles })
+        variable = mwse.mcm.createTableVariable({ id = "disablevanitymode", table = config.consoleToggles })
+    })
+
+    consolePage:createYesNoButton({
+        label = "Console Custom Commands",
+        description = "Executes the lines in console.lua when teleporting to landmass center.",
+        variable = mwse.mcm.createTableVariable({ id = "runConsoleCustomCommands", table = config })
     })
 
     mwse.mcm.register(template)

@@ -14,7 +14,7 @@ function teleport.setCancelRef(refTable)
 end
 
 local function getTeleportZ(z)
-    return z + (config.exportConsoleToggles.tcl and config.tclTeleportZOffset or 0)
+    return z + (config.consoleToggles.tcl and config.tclTeleportZOffset or 0)
 end
 
 -- =============================================================================

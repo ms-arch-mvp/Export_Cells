@@ -11,6 +11,7 @@ local nifsModule = require("ExportCells.modules.nifs")
 local meshesModule = require("ExportCells.modules.meshes")
 local recordsModule = require("ExportCells.modules.records")
 local reportsModule = require("ExportCells.modules.reports")
+local scriptsModule = require("ExportCells.modules.scripts")
 
 local ui = require("ExportCells.ui")
 local utils = require("ExportCells.utils")
@@ -34,6 +35,7 @@ function export.setConfig(cfg)
     meshesModule.setConfig(cfg)
     recordsModule.setConfig(cfg)
     reportsModule.setConfig(cfg)
+    scriptsModule.setConfig(cfg)
 
     utils.setConfig(cfg)
 end
@@ -44,6 +46,7 @@ function export.setCancelRef(ref)
     interiorsModule.setCancelRef(exportCancelRequestedRef)
     meshesModule.setCancelRef(exportCancelRequestedRef)
     recordsModule.setCancelRef(exportCancelRequestedRef)
+    scriptsModule.setCancelRef(exportCancelRequestedRef)
     teleport.setCancelRef(exportCancelRequestedRef)
 end
 
@@ -99,7 +102,7 @@ interiorsModule.onComplete = function(cancelled, singleCell, gridType)
     if not singleCell and exportReturnPos and exportReturnCell then
         tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell }
     end
-    utils.restoreExportConsoleToggles()
+    utils.restoreConsoleToggles()
     local exportMode = config.defaultExportModes[gridType] or config.defaultExportModes["active"]
     if cancelled then
         tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export cancelled. Returned to starting cell.", "Traversal cancelled. Returned to starting cell."))
@@ -157,7 +160,7 @@ local function writeExteriorsTxt(cell, gridType, exportMode, size)
 end
 
 function export.exportGridWithSize(size, gridType)
-    utils.setupExportConsoleToggles()
+    utils.setupConsoleToggles()
     local cell = tes3.player.cell
     local exportMode = config.defaultExportModes[gridType]
 
@@ -194,7 +197,7 @@ function export.exportGridWithSize(size, gridType)
         if exportReturnPos and exportReturnCell then
             tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell, suppressFader = true }
         end
-        utils.restoreExportConsoleToggles()
+        utils.restoreConsoleToggles()
         if cancelled then
             tes3.messageBox(utils.traversalOrExportMsg(exportMode, "Export cancelled.", "Traversal cancelled."))
         else
@@ -229,7 +232,7 @@ end
 -- LANDMASS EXPORT CONTROLLER
 -- =============================================================================
 function export.exportLandmassGrid(gridType)
-    utils.setupExportConsoleToggles()
+    utils.setupConsoleToggles()
     if exportInProgress then return end
 
     local extents = utils.getLandmassExtents()
@@ -251,7 +254,7 @@ function export.exportLandmassGrid(gridType)
         if exportReturnPos and exportReturnCell then
             tes3.positionCell{ reference = tes3.player, position = exportReturnPos, cell = exportReturnCell }
         end
-        utils.restoreExportConsoleToggles()
+        utils.restoreConsoleToggles()
         tes3.messageBox(utils.traversalOrExportMsg(exportMode,
             cancelled and "Landmass export cancelled." or "Landmass export completed.",
             cancelled and "Landmass traversal cancelled." or "Landmass traversal completed."))
@@ -294,7 +297,7 @@ end
 function export.getLandmassReport() reportsModule.getLandmassReport() end
 function export.getInteriorReport() reportsModule.getInteriorReport() end
 function export.exportInteriorsFromSameMod(gridType)
-    utils.setupExportConsoleToggles()
+    utils.setupConsoleToggles()
     exportReturnPos = tes3.player.position:copy()
     exportReturnCell = tes3.player.cell
     exportInProgress = true
@@ -304,7 +307,7 @@ end
 
 -- Misc
 function export.isInProgress() 
-    return exportInProgress or meshesModule.isInProgress() or recordsModule.isInProgress()
+    return exportInProgress or meshesModule.isInProgress() or recordsModule.isInProgress() or scriptsModule.isInProgress()
 end
 function export.exportObjectsByMeshFolder(folder)
     if folder then
@@ -379,12 +382,29 @@ function export.promptExportRecords()
         tes3.messageBox("An export is already in progress.")
         return
     end
-    ui.createRecordInputDialog({
+    ui.createRecordsInputDialog({
         onConfirm = function(inputString)
             recordsModule.exportModRecords(inputString)
         end,
         onAllRecords = function(resumePart)
             recordsModule.exportAllRecords(resumePart)
+        end,
+        onCancel = function()
+        end
+    })
+end
+
+function export.promptExportScripts()
+    if export.isInProgress() then
+        tes3.messageBox("An export is already in progress.")
+        return
+    end
+    ui.createScriptsInputDialog({
+        onConfirm = function(inputString)
+            scriptsModule.exportModScripts(inputString)
+        end,
+        onAllScripts = function()
+            scriptsModule.exportAllScripts()
         end,
         onCancel = function()
         end

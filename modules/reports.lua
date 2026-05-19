@@ -171,7 +171,7 @@ function reports.getLandmassReport()
         local file, err = io.open(filePath, "w")
         if file then file:write(table.concat(exportLines, "\n")); file:close(); tes3.messageBox("Report exported: %s", fileName) else tes3.messageBox("Failed to write landmass report.") end
     end
-    ui.showReportWindow("Landmass Report", reportLines)
+    ui.showReportsWindow("Landmass Report", reportLines)
 end
 
 -- =============================================================================
@@ -228,7 +228,7 @@ function reports.getInteriorReport()
         local file, err = io.open(filePath, "w")
         if file then file:write(table.concat(reportLines, "\n")); file:close(); tes3.messageBox("Report exported: %s", fileName) else tes3.messageBox("Failed to write interior report.") end
     end
-    ui.showReportWindow("Interior Report", reportLines)
+    ui.showReportsWindow("Interior Report", reportLines)
 end
 
 return reports

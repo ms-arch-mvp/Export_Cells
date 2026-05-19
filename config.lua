@@ -86,7 +86,7 @@ local config = {
     -- =============================================================================
     -- CONSOLE
     -- =============================================================================
-    exportConsoleToggles = {
+    consoleToggles = {
         tgm = true,
         tai = true,
         disablevanitymode = true,
@@ -98,6 +98,7 @@ local config = {
         tai = true,
     },
 
+    runConsoleCustomCommands = true,
 }
 
 return config

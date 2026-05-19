@@ -308,15 +308,15 @@ function utils.traversalOrExportMsg(exportMode, exportMsg, traversalMsg)
 end
 
 -- Console toggle helpers: fire-and-forget.
--- exportConsoleToggles are applied once at export start and left on for the session.
+-- consoleToggles are applied once at export start and left on for the session.
 -- restoreConsoleToggles are re-disabled when export finishes.
 local togglesSetup = false
 
-function utils.setupExportConsoleToggles()
+function utils.setupConsoleToggles()
     if togglesSetup then return end
-    if not config or not config.exportConsoleToggles then return end
+    if not config or not config.consoleToggles then return end
 
-    for toggle, enabledInConfig in pairs(config.exportConsoleToggles) do
+    for toggle, enabledInConfig in pairs(config.consoleToggles) do
         if enabledInConfig then
             tes3.runLegacyScript{ command = toggle }
         end
@@ -324,7 +324,7 @@ function utils.setupExportConsoleToggles()
     togglesSetup = true
 end
 
-function utils.restoreExportConsoleToggles()
+function utils.restoreConsoleToggles()
     if not config or not config.restoreConsoleToggles then return end
 
     for toggle, shouldRestore in pairs(config.restoreConsoleToggles) do
@@ -334,6 +334,80 @@ function utils.restoreExportConsoleToggles()
     end
     -- Do NOT reset togglesSetup — persistent toggles (e.g. TCL) must not
     -- re-fire on the next export. They were intentionally left on for the session.
+end
+
+function utils.executeConsoleFile()
+    -- Check for console.lua first
+    local luaPath = "Data Files/MWSE/mods/ExportCells/console.lua"
+    local file = io.open(luaPath, "r")
+    if not file then
+        luaPath = "MWSE/mods/ExportCells/console.lua"
+        file = io.open(luaPath, "r")
+    end
+
+    if file then
+        file:close()
+
+        -- Check if there are any executable (non-empty, non-comment) lines
+        local hasExecutableLines = false
+        local checkFile = io.open(luaPath, "r")
+        if checkFile then
+            for line in checkFile:lines() do
+                local trimmed = line:gsub("^%s+", ""):gsub("%s+$", "")
+                if trimmed ~= "" and not trimmed:match("^%-%-") then
+                    hasExecutableLines = true
+                    break
+                end
+            end
+            checkFile:close()
+        end
+
+        mwse.log("[Export Cells] Found console.lua, executing...")
+        local fn, err = loadfile(luaPath)
+        if fn then
+            local status, runErr = pcall(fn)
+            if status then
+                if hasExecutableLines then
+                    tes3.messageBox("Executed console custom commands.")
+                end
+            else
+                local errMsg = "Error running console.lua: " .. tostring(runErr)
+                tes3.messageBox(errMsg)
+                mwse.log("[Export Cells] " .. errMsg)
+            end
+        else
+            local errMsg = "Error loading console.lua: " .. tostring(err)
+            tes3.messageBox(errMsg)
+            mwse.log("[Export Cells] " .. errMsg)
+        end
+        return
+    end
+
+    -- If console.lua was not found, check console.txt
+    local txtPath = "Data Files/MWSE/mods/ExportCells/console.txt"
+    file = io.open(txtPath, "r")
+    if not file then
+        txtPath = "MWSE/mods/ExportCells/console.txt"
+        file = io.open(txtPath, "r")
+    end
+
+    if file then
+        mwse.log("[Export Cells] Found console.txt, executing lines...")
+        local count = 0
+        for line in file:lines() do
+            local cmd = line:gsub("^%s+", ""):gsub("%s+$", "")
+            if cmd ~= "" and not cmd:match("^%-%-") and not cmd:match("^#") and not cmd:match("^;") then
+                tes3.runLegacyScript{ command = cmd }
+                count = count + 1
+            end
+        end
+        file:close()
+        if count > 0 then
+            tes3.messageBox("Executed %d console commands from console.txt", count)
+        end
+    else
+        mwse.log("[Export Cells] Neither console.lua nor console.txt was found.")
+    end
 end
 
 return utils

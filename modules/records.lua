@@ -66,13 +66,17 @@ local function doExport(modFilter, startChunk)
         
         lfs.mkdir(config.exportFolder)
         local exportName = modFilter and (modFilter:gsub("%.es.$", ""):gsub("[^%w]", "_") .. " records") or "master records"
-        local fileName = string.format("%s part %d.json", exportName, chunkIndex)
+        local fileName = totalChunks == 1 and string.format("%s.json", exportName) or string.format("%s part %d.json", exportName, chunkIndex)
         local path = config.exportFolder .. "\\" .. fileName
         
         -- Export at 0,0,0
         jsons.exportObjectGroup(exportName, chunkObjects, 0, 10, path)
         
-        tes3.messageBox("Exporting %s: Part %d of %d", exportName, chunkIndex, totalChunks)
+        if totalChunks == 1 then
+            tes3.messageBox("Exporting %s...", exportName)
+        else
+            tes3.messageBox("Exporting %s: Part %d of %d", exportName, chunkIndex, totalChunks)
+        end
         timer.start({ duration = 0.05, callback = function() processChunk(chunkIndex + 1) end })
     end
 
@@ -88,6 +92,12 @@ function records.exportModRecords(inputString)
         tes3.messageBox("Please enter a mod name to export its records.")
         return
     end
+
+    -- Append .esp if extension is missing, safely checking lowercase to prevent .ESP.esp
+    if not inputString:lower():match("%.es[mp]$") then
+        inputString = inputString .. ".esp"
+    end
+
     doExport(inputString, 1)
 end
 
