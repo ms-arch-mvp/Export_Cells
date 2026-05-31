@@ -220,6 +220,7 @@ function utils.getRelativeMeshPath(meshPath)
     local rel = meshPath:match("[\\/][Mm][Ee][Ss][Hh][Ee][Ss][\\/](.+)$")
                or meshPath:match("^[Mm][Ee][Ss][Hh][Ee][Ss][\\/](.+)$")
                or meshPath
+    rel = rel:gsub("/", "\\")
     return rel:gsub("%.[^%.]+$", string.lower)
 end
 
