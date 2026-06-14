@@ -16,6 +16,11 @@ local function resolveNodeTypeString(s)
     return s or NIL_TYPE
 end
 
+local function isJsonLightNode(node)
+    return node:isInstanceOfType(tes3.niType.NiPointLight) or
+           node:isInstanceOfType(tes3.niType.NiSpotLight)
+end
+
 -- =============================================================================
 -- SERIALIZATION HELPERS
 -- =============================================================================
@@ -162,17 +167,18 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
 
     jsons.emitEntry(context, instName, parentName, rootTransform, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), fieldLines)
 
-    -- Non-light instances: skip child traversal unless they contain particle nodes.
-    local hasParticleNodes = false
+    -- Non-light instances: skip child traversal unless they contain particle nodes or light sources.
+    local hasSpecialNodes = false
     if config.jsonSelectiveChildNodesOnly and not isLight then
         local clonedCheck = sceneNode:clone()
         for node in table.traverse({clonedCheck}) do
-            if node:isInstanceOfType(tes3.niType.NiBSParticleNode) then
-                hasParticleNodes = true
+            if node:isInstanceOfType(tes3.niType.NiBSParticleNode) or
+               isJsonLightNode(node) then
+                hasSpecialNodes = true
                 break
             end
         end
-        if not hasParticleNodes then return end
+        if not hasSpecialNodes then return end
     end
 
     local nodeJsonNames = {}
@@ -189,8 +195,7 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
 
     for node in table.traverse({cloned}) do
         local isParticle  = node:isInstanceOfType(tes3.niType.NiBSParticleNode)
-        local isLightNode = node:isInstanceOfType(tes3.niType.NiPointLight) or
-                            node:isInstanceOfType(tes3.niType.NiSpotLight)
+        local isLightNode = isJsonLightNode(node)
 
         if isLightNode or isParticle then
             selectedAncestors[node.name or ""] = true
@@ -272,11 +277,14 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
             goto nextNode
         end
 
-        if config.jsonSelectiveChildNodesOnly and (isLight or hasParticleNodes) and not selectedAncestors[node.name or ""] and node.name ~= "AttachLight" then
+        if config.jsonSelectiveChildNodesOnly and (isLight or hasSpecialNodes) and not selectedAncestors[node.name or ""] and node.name ~= "AttachLight" then
             goto nextNode
         end
 
-        local baseName = (node.name and node.name ~= "") and node.name or "Node"
+        local baseName = (node.name and node.name ~= "") and node.name or nil
+        if not baseName then
+            baseName = isJsonLightNode(node) and (objId or instName) or "Node"
+        end
 
         local nodeName
         if config.jsonSequentialNaming then
