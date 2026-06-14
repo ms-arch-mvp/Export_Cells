@@ -430,6 +430,90 @@ function ui.createScriptsInputDialog(params)
     tes3ui.acquireTextInput(input)
 end
 
+function ui.createWearablesInputDialog(params)
+    local onConfirm = params.onConfirm
+    local onInventory = params.onInventory
+    local onCancel = params.onCancel
+
+    local GUI_ID_InputDialog = tes3ui.registerID("Wearables:InputDialog")
+    local GUI_ID_InputField = tes3ui.registerID("Wearables:InputField")
+
+    local menu = tes3ui.createMenu({ id = GUI_ID_InputDialog, fixedFrame = true })
+    menu.minWidth = 500
+    menu.minHeight = 120
+    menu.autoHeight = true
+    menu.autoWidth = true
+
+    local title = menu:createLabel({ text = "Add wearables from mod (.esp/.esm) or from search:" })
+    title.borderBottom = 15
+
+    local inputBlock = menu:createBlock()
+    inputBlock.autoHeight = true
+    inputBlock.widthProportional = 1.0
+
+    local input = inputBlock:createTextInput({ id = GUI_ID_InputField })
+    input.widthProportional = 1.0
+    input.height = 30
+    input.borderAllSides = 5
+
+    local checkboxBlock = menu:createBlock()
+    checkboxBlock.autoHeight = true
+    checkboxBlock.widthProportional = 1.0
+    checkboxBlock.borderTop = 15
+    checkboxBlock.flowDirection = "left_to_right"
+
+    local isChecked = true
+
+    local checkbox = checkboxBlock:createButton({ text = "[X]" })
+    checkbox.paddingAllSides = 4
+
+    local function updateCheckbox()
+        checkbox.text = isChecked and "[X]" or "[ ]"
+        checkbox:updateLayout()
+    end
+
+    checkbox:register("mouseClick", function()
+        isChecked = not isChecked
+        updateCheckbox()
+    end)
+
+    local checkboxLabel = checkboxBlock:createLabel({ text = " Remove existing wearables" })
+    checkboxLabel.borderLeft = 8
+    checkboxLabel.borderTop = 4
+
+    local buttonBlock = menu:createBlock()
+    buttonBlock.widthProportional = 1.0
+    buttonBlock.autoHeight = true
+    buttonBlock.childAlignX = 1.0
+    buttonBlock.borderTop = 20
+
+    local okButton = buttonBlock:createButton({ text = "OK" })
+    okButton:register("mouseClick", function()
+        local searchText = input.text
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onConfirm then onConfirm(searchText, isChecked) end
+    end)
+
+    local inventoryButton = buttonBlock:createButton({ text = "Inventory" })
+    inventoryButton:register("mouseClick", function()
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onInventory then onInventory() end
+    end)
+
+    local cancelButton = buttonBlock:createButton({ text = "Cancel" })
+    cancelButton:register("mouseClick", function()
+        menu:destroy()
+        tes3ui.leaveMenuMode()
+        if onCancel then onCancel() end
+    end)
+
+    menu:updateLayout()
+    tes3ui.enterMenuMode(GUI_ID_InputDialog)
+    tes3ui.acquireTextInput(input)
+end
+
 
 -- =============================================================================
 -- WINDOWS
