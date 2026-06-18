@@ -62,6 +62,10 @@ local config = {
     flaggedMeshesFile = "Flagged meshes.txt",
     exportMeshesWithJson = false,
     exportMeshesSpacedOut = true,
+    recordsRequireMesh = false,
+    recordsExcludeTypes = {
+        --tes3.objectType.creature,
+    },
 
     -- =============================================================================
     -- JSONS
@@ -70,6 +74,11 @@ local config = {
         "object_id",
         "object_name",
         "object_type",
+        "weapon_type",
+        "clothing_type",
+        "creature_type",
+        "apparatus_type",
+        "armor_type",
         -- "source_form_id",
         -- "source_mod_id",  
         "source_mod",

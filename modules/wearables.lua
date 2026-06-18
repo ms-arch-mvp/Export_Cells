@@ -20,34 +20,36 @@ end
 -- WEARABLE MANAGEMENT
 -- =============================================================================
 local function removeExistingWearables(ref)
-    local itemsRemoved = 0
-    
     local inventory = ref.object.inventory
-    
+    local toRemove = {}
+
     for _, stack in pairs(inventory) do
         local item = stack.object
         for _, objectType in ipairs(wearableTypes) do
             if item.objectType == objectType then
-                tes3.removeItem({
-                    reference = ref,
-                    item = item,
-                    count = stack.count,
-                    playSound = false
-                })
-                itemsRemoved = itemsRemoved + stack.count
+                table.insert(toRemove, { id = item.id, count = stack.count })
                 break
             end
         end
     end
-    
-    return itemsRemoved
+
+    for _, entry in ipairs(toRemove) do
+        tes3.removeItem({
+            reference = ref,
+            item = entry.id,
+            count = entry.count,
+            playSound = false
+        })
+    end
+
+    return #toRemove > 0
 end
 
 local function addWearablesToNPC(ref, searchText, removeExisting)
     if removeExisting then
         local removed = removeExistingWearables(ref)
-        if removed > 0 then
-            tes3.messageBox("Removed %d existing wearable item(s) from %s", removed, ref.baseObject.name)
+        if removed then
+            tes3.messageBox("Removed existing wearables from %s", ref.baseObject.name)
         end
     end
 

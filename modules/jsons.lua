@@ -37,6 +37,20 @@ local function jsonNumber(n)
     return string.format("%.8g", n)
 end
 
+local function safeRead(obj, propertyName)
+    local ok, value = pcall(function() return obj[propertyName] end)
+    if ok then return value end
+    return nil
+end
+
+local function enumName(enumTable, value)
+    if not enumTable or value == nil then return nil end
+    for name, enumValue in pairs(enumTable) do
+        if enumValue == value then return name end
+    end
+    return tostring(value)
+end
+
 -- =============================================================================
 -- TRANSFORM HELPERS
 -- =============================================================================
@@ -66,6 +80,14 @@ local function buildMatrix4x4(transform)
             jsonNumber(t.x), jsonNumber(t.y), jsonNumber(t.z)
         ),
     }, "\n")
+end
+
+local function identityTransform(x, y, z)
+    return {
+        translation = tes3vector3.new(x or 0, y or 0, z or 0),
+        rotation = tes3matrix33.new(1,0,0, 0,1,0, 0,0,1),
+        scale = 1.0
+    }
 end
 
 -- =============================================================================
@@ -124,6 +146,31 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
         object_id      = function() return jsonString(objId) end,
         object_name    = function() return objName and objName ~= "" and jsonString(objName) end,
         object_type    = function() return jsonString(typeName) end,
+        weapon_type    = function()
+            if objType ~= tes3.objectType.weapon then return nil end
+            local value = safeRead(obj, "typeName") or enumName(tes3.weaponType, safeRead(obj, "type"))
+            return value and jsonString(value)
+        end,
+        clothing_type  = function()
+            if objType ~= tes3.objectType.clothing then return nil end
+            local value = safeRead(obj, "slotName") or enumName(tes3.clothingSlot, safeRead(obj, "slot"))
+            return value and jsonString(value)
+        end,
+        creature_type  = function()
+            if objType ~= tes3.objectType.creature then return nil end
+            local value = enumName(tes3.creatureType, safeRead(obj, "type"))
+            return value and jsonString(value)
+        end,
+        apparatus_type = function()
+            if objType ~= tes3.objectType.apparatus then return nil end
+            local value = enumName(tes3.apparatusType, safeRead(obj, "type"))
+            return value and jsonString(value)
+        end,
+        armor_type     = function()
+            if objType ~= tes3.objectType.armor then return nil end
+            local value = safeRead(obj, "slotName") or enumName(tes3.armorSlot, safeRead(obj, "slot"))
+            return value and jsonString(value)
+        end,
         source_form_id = function() return ref and jsonNumber(ref.sourceFormId or 0) end,
         source_mod_id  = function() return ref and jsonNumber(ref.sourceModId or 0) end,
         source_mod     = function() return jsonString((ref and ref.sourceMod) or obj.sourceMod or "") end,
@@ -161,11 +208,16 @@ function jsons.processInstance(context, obj, sceneNode, instName, parentName, tr
         table.insert(fieldLines, #fieldLines, "    " .. jsonString("light_data") .. ": " .. lightJson .. ",")
     end
 
-    local cloned = sceneNode:clone()
-    local wt = transformOverride or sceneNode.worldTransform
+    local wt = transformOverride or (sceneNode and sceneNode.worldTransform) or identityTransform()
     local rootTransform = wt
 
     jsons.emitEntry(context, instName, parentName, rootTransform, resolveNodeTypeString(constants.jsonNodeTypes[tes3.niType.NiNode]), fieldLines)
+
+    if not sceneNode then
+        return
+    end
+
+    local cloned = sceneNode:clone()
 
     -- Non-light instances: skip child traversal unless they contain particle nodes or light sources.
     local hasSpecialNodes = false
@@ -563,22 +615,29 @@ function jsons.exportObjectGroup(folderName, objects, spacing, rowSize, path)
 
     local count = 0
     for _, obj in ipairs(objects) do
-        local node = tes3.loadMesh(obj.mesh)
+        local hasMesh = obj.mesh and obj.mesh ~= ""
+        local node = hasMesh and tes3.loadMesh(obj.mesh) or nil
         if node then
-            local objId = obj.id
+            local objId = obj.id or "unknown"
             context.idCounters[objId] = (context.idCounters[objId] or 0) + 1
             local ci = context.idCounters[objId]
             local instName = ci == 1 and objId or string.format("%s.%03d", objId, ci - 1)
 
             local x = (count % rowSize) * spacing
             local y = math.floor(count / rowSize) * spacing
-            local transform = {
-                translation = tes3vector3.new(x, y, 0),
-                rotation = tes3matrix33.new(1,0,0, 0,1,0, 0,0,1),
-                scale = 1.0
-            }
+            local transform = identityTransform(x, y, 0)
 
             jsons.processInstance(context, obj, node, instName, rootName, transform, nil)
+            count = count + 1
+        elseif not hasMesh then
+            local objId = obj.id or "unknown"
+            context.idCounters[objId] = (context.idCounters[objId] or 0) + 1
+            local ci = context.idCounters[objId]
+            local instName = ci == 1 and objId or string.format("%s.%03d", objId, ci - 1)
+
+            local x = (count % rowSize) * spacing
+            local y = math.floor(count / rowSize) * spacing
+            jsons.processInstance(context, obj, nil, instName, rootName, identityTransform(x, y, 0), nil)
             count = count + 1
         end
     end

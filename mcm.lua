@@ -25,6 +25,7 @@ function mcm.registerModConfig()
     exportPage:createTextField({
         label = "Export Folder Path",
         description = "Directory where exported files will be written.",
+        buttonText = "Apply",
         variable = mwse.mcm.createTableVariable({ id = "exportFolder", table = config })
     })
 
@@ -82,6 +83,7 @@ function mcm.registerModConfig()
     customGridGroup:createTextField({
         label = "Custom Grid Size (1x1)",
         description = "Additional grid size option for 1x1 exports.",
+        buttonText = "Apply",
         variable = mwse.mcm.createTableVariable({ id = "customGridSize1x1", table = config }),
         numbersOnly = true
     })
@@ -89,6 +91,7 @@ function mcm.registerModConfig()
     customGridGroup:createTextField({
         label = "Custom Grid Size (2x2)",
         description = "Additional grid size option for 2x2 exports.",
+        buttonText = "Apply",
         variable = mwse.mcm.createTableVariable({ id = "customGridSize2x2", table = config }),
         numbersOnly = true
     })
@@ -96,6 +99,7 @@ function mcm.registerModConfig()
     customGridGroup:createTextField({
         label = "Custom Grid Size (3x3)",
         description = "Additional grid size option for 3x3 exports.",
+        buttonText = "Apply",
         variable = mwse.mcm.createTableVariable({ id = "customGridSize3x3", table = config }),
         numbersOnly = true
     })
@@ -146,7 +150,7 @@ function mcm.registerModConfig()
 
     toggleGroup:createYesNoButton({
         label = "Reset Animation Before Export",
-        description = "Resets NPC and creature animations to their idle start pose before exporting. Helps avoid exporting characters mid-animation.",
+        description = "Resets NPC and creature animations to their idle start pose before exporting. Helps avoid exporting actors mid-animation.",
         variable = mwse.mcm.createTableVariable({ id = "resetAnimation", table = config })
     })
 
@@ -178,6 +182,12 @@ function mcm.registerModConfig()
         label = "Meshes: Spaced Out In Grid",
         description = "When exporting meshes, arrange them in a grid. If disabled, all objects will be placed at the origin (0,0,0).",
         variable = mwse.mcm.createTableVariable({ id = "exportMeshesSpacedOut", table = config })
+    })
+
+    toggleGroup:createYesNoButton({
+        label = "Records: Require Mesh",
+        description = "Only export records that have a mesh path.",
+        variable = mwse.mcm.createTableVariable({ id = "recordsRequireMesh", table = config })
     })
 
     -- =============================================================================

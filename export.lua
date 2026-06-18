@@ -4,7 +4,7 @@ local constants = require("ExportCells.constants")
 local grid = require("ExportCells.infrastructure.grid")
 local teleport = require("ExportCells.infrastructure.teleport")
 
-local charactersModule = require("ExportCells.modules.characters")
+local actorsModule = require("ExportCells.modules.actors")
 local interiorsModule = require("ExportCells.modules.interiors")
 local jsonModule = require("ExportCells.modules.jsons")
 local nifsModule = require("ExportCells.modules.nifs")
@@ -28,7 +28,7 @@ function export.setConfig(cfg)
     grid.setConfig(cfg)
     teleport.setConfig(cfg)
 
-    charactersModule.setConfig(cfg)
+    actorsModule.setConfig(cfg)
     interiorsModule.setConfig(cfg)
     jsonModule.setConfig(cfg)
     nifsModule.setConfig(cfg)
@@ -422,7 +422,7 @@ export.exportActiveCells = exportActiveCells
 
 function export.exportCharacter()
     local ref = tes3.getPlayerTarget()
-    charactersModule.export(ref)
+    actorsModule.export(ref)
 end
 
 return export

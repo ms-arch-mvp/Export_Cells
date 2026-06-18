@@ -15,6 +15,15 @@ end
 local exportInProgress = false
 function records.isInProgress() return exportInProgress end
 
+local function isExcludedRecordType(objectType)
+    for _, excludedType in ipairs(config.recordsExcludeTypes or {}) do
+        if objectType == excludedType then
+            return true
+        end
+    end
+    return false
+end
+
 local function doExport(modFilter, startChunk)
     if exportInProgress then tes3.messageBox("An export is already in progress."); return end
     
@@ -24,20 +33,26 @@ local function doExport(modFilter, startChunk)
     local modFilterLower = modFilter and modFilter:lower() or nil
     startChunk = startChunk or 1
     
+    local requireMesh = config.recordsRequireMesh ~= false
+
     for _, obj in pairs(allObjects) do
-        if obj and obj.mesh and obj.mesh ~= "" and obj.objectType ~= tes3.objectType.creature then
-            if not modFilterLower or (obj.sourceMod and obj.sourceMod:lower() == modFilterLower) then
-                table.insert(results, obj)
+        if obj then
+            local hasMesh = obj.mesh and obj.mesh ~= ""
+            local allowMesh = not requireMesh or hasMesh
+            if allowMesh and not isExcludedRecordType(obj.objectType) then
+                if not modFilterLower or (obj.sourceMod and obj.sourceMod:lower() == modFilterLower) then
+                    table.insert(results, obj)
+                end
             end
         end
     end
-    table.sort(results, function(a,b) return a.id < b.id end)
+    table.sort(results, function(a,b) return tostring(a.id) < tostring(b.id) end)
     
     if #results == 0 then
         if modFilter then
             tes3.messageBox("No records found for mod: %s", modFilter)
         else
-            tes3.messageBox("No records found with meshes.")
+            tes3.messageBox(requireMesh and "No records found with meshes." or "No records found.")
         end
         return
     end

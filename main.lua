@@ -167,16 +167,16 @@ local function onKeyDownSpace(e)
     end
 end
 
--- Shift+C: Add Wearables To NPC Call
-local function onKeyDownC(e)
+-- Shift+N: Add Wearables To NPC Call
+local function onKeyDownN(e)
     if tes3ui.menuMode() then return end
     if e.isShiftDown then
         wearables.showInputDialog()
     end
 end
 
--- Shift+N: Export Character Call
-local function onKeyDownCharacter(e)
+-- Shift+C: Export Character Call
+local function onKeyDownC(e)
     if tes3ui.menuMode() then return end
     if e.isShiftDown then
         export.exportCharacter()
@@ -192,6 +192,6 @@ event.register("keyDown", onKeyDown8, { filter = tes3.scanCode["8"] })
 event.register("keyDown", onKeyDown9, { filter = tes3.scanCode["9"] })
 event.register("keyDown", onKeyDown0, { filter = tes3.scanCode["0"] })
 event.register("keyDown", onKeyDownR, { filter = tes3.scanCode.r })
+event.register("keyDown", onKeyDownN, { filter = tes3.scanCode.n })
 event.register("keyDown", onKeyDownC, { filter = tes3.scanCode.c })
-event.register("keyDown", onKeyDownCharacter, { filter = tes3.scanCode.n })
 event.register("keyDown", onKeyDownSpace)
