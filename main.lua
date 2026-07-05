@@ -16,6 +16,7 @@ if defaultConfig.useSavedConfig then
 else
     config = defaultConfig
 end
+utils.resolveExportFolder(config)
 
 wearables.setConfig(config)
 

@@ -1,11 +1,13 @@
 local constants = require("ExportCells.constants")
 local defaultConfig = require("ExportCells.config")
+local utils = require("ExportCells.utils")
 local config
 if defaultConfig.useSavedConfig then
     config = mwse.loadConfig("Export Cells", defaultConfig)
 else
     config = defaultConfig
 end
+utils.resolveExportFolder(config)
 
 local mcm = {}
 
@@ -15,23 +17,14 @@ function mcm.registerModConfig()
 
 
     -- =============================================================================
-    -- EXPORT SETTINGS PAGE
+    -- MODE SETTINGS PAGE
     -- =============================================================================
-    local exportPage = template:createSideBarPage({
-        label = "Export Settings",
+    local modesPage = template:createSideBarPage({
+        label = "Mode Settings",
         description = "Configure export behavior."
     })
 
-    local group = exportPage:createCategory("Export Folder")
-
-    group:createTextField({
-        label = "Folder Path",
-        description = "Directory where files will be exported.",
-        buttonText = "Apply",
-        variable = mwse.mcm.createTableVariable({ id = "exportFolder", table = config })
-    })
-
-    local group = exportPage:createCategory("Export Modes")
+    local group = modesPage:createCategory("Export Modes")
 
     local exportModes = {
         { label = "Standard", value = constants.EXPORT_MODE.STANDARD },
@@ -70,6 +63,18 @@ function mcm.registerModConfig()
         variable = mwse.mcm.createTableVariable({ id = "3x3", table = config.defaultExportModes })
     })
 
+    local actorExportModeOptions = {
+        { label = "Target", value = constants.ACTOR_EXPORT_MODE.TARGET },
+        { label = "Active Cells", value = constants.ACTOR_EXPORT_MODE.ACTIVE_CELLS },
+    }
+
+    group:createDropdown({
+        label = "Actor",
+        description = "Select the actor export mode for Shift+C: Target exports the targeted NPC/creature; Active Cells exports unique actors from currently active cells.",
+        options = actorExportModeOptions,
+        variable = mwse.mcm.createTableVariable({ id = "actorExportMode", table = config })
+    })
+
     local layerOptions = {}
     local sortedTypes = {}
     for k, v in pairs(constants.objectTypeNames) do
@@ -80,7 +85,7 @@ function mcm.registerModConfig()
         table.insert(layerOptions, { label = item.name, value = item.id })
     end
 
-    local group = exportPage:createCategory("Custom Grid Sizes")
+    local group = modesPage:createCategory("Custom Grid Sizes")
 
     group:createTextField({
         label = "Custom Grid Size (1x1)",
@@ -124,6 +129,24 @@ function mcm.registerModConfig()
         variable = mwse.mcm.createTableVariable({ id = "teleportDelaySeconds", table = config })
     })
 
+    -- =============================================================================
+    -- EXPORT SETTINGS PAGE
+    -- =============================================================================
+    local exportPage = template:createSideBarPage({
+        label = "Export Settings",
+        description = "Configure export settings."
+    })
+
+    local group = exportPage:createCategory("Export Folder")
+
+    group:createTextField({
+        label = "Folder Path",
+        description = "Folder name that exported files are written under, inside Data Files "
+            .. "(e.g. \"Export Cells\").",
+        buttonText = "Apply",
+        variable = mwse.mcm.createTableVariable({ id = "exportFolderName", table = config })
+    })
+
     local group = exportPage:createCategory("Export Toggles")
 
     group:createYesNoButton({
@@ -148,12 +171,6 @@ function mcm.registerModConfig()
         label = "Export Empty Landmass Cells",
         description = "Include empty cells when using landmass export.",
         variable = mwse.mcm.createTableVariable({ id = "exportEmptyLandmassCells", table = config })
-    })
-
-    group:createYesNoButton({
-        label = "Reset Animation Before Export",
-        description = "Resets NPC and creature animations to their idle start pose before exporting. Helps avoid exporting actors mid-animation.",
-        variable = mwse.mcm.createTableVariable({ id = "resetAnimation", table = config })
     })
 
     local group = exportPage:createCategory("JSONs")
@@ -189,20 +206,8 @@ function mcm.registerModConfig()
         description = "Sequentially renames mesh nodes (NiTriShape/NiTriStrips) using the object's relative mesh path.",
         variable = mwse.mcm.createTableVariable({ id = "nifRenameMeshChildNodes", table = config })
     })
-
+    
     local group = exportPage:createCategory("Actors")
-
-    local actorExportModeOptions = {
-        { label = "Target", value = constants.ACTOR_EXPORT_MODE.TARGET },
-        { label = "Active Cells", value = constants.ACTOR_EXPORT_MODE.ACTIVE_CELLS },
-    }
-
-    group:createDropdown({
-        label = "Actor Export Mode",
-        description = "Select the actor export mode for Shift+C: Target exports the targeted NPC/creature; Active Cells exports unique actors from currently active cells.",
-        options = actorExportModeOptions,
-        variable = mwse.mcm.createTableVariable({ id = "actorExportMode", table = config })
-    })
 
     local actorFilenameOptions = {
         { label = "Object ID", value = "id" },
@@ -214,6 +219,12 @@ function mcm.registerModConfig()
         description = "Choose whether exported NIF files use the object ID or name. Object IDs are for uniqueness, whereas names are for readability.",
         options = actorFilenameOptions,
         variable = mwse.mcm.createTableVariable({ id = "actorFilename", table = config })
+    })
+
+    group:createYesNoButton({
+        label = "Reset Animation Before Export",
+        description = "Resets NPC and creature animations to their idle start pose before exporting. Helps avoid exporting actors mid-animation.",
+        variable = mwse.mcm.createTableVariable({ id = "resetAnimation", table = config })
     })
 
     local group = exportPage:createCategory("Meshes")

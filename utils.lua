@@ -59,6 +59,32 @@ function utils.setConfig(cfg)
     config = cfg
 end
 
+-- Strips any leading "data files" segment (any case, either slash style) from a
+-- folder value, so resolveExportFolder can re-add it exactly once.
+local function stripDataFilesPrefix(folder)
+    folder = (folder or ""):gsub("[\\/]+$", "")
+    folder = folder:gsub("^[Dd][Aa][Tt][Aa]%s+[Ff][Ii][Ll][Ee][Ss][\\/]+", "")
+    return folder
+end
+
+-- Computes cfg.exportFolder (the fully resolved "data files\<name>" path every
+-- export module reads directly) from cfg.exportFolderName (the bare folder
+-- name edited via MCM). Call once on the resolved config table (see
+-- main.lua/mcm.lua) -- every other module reads config.exportFolder directly
+-- and expects it to already be fully resolved, so this must run before any of
+-- them do. Deliberately does NOT write back into cfg.exportFolderName -- that
+-- field is what the MCM text field is bound to, and must stay a bare name, not
+-- get overwritten with the resolved "data files\..." value (that was the bug:
+-- an earlier version of this function normalized cfg.exportFolder in place,
+-- which is the same field MCM edits, so the field displayed the resolved path
+-- instead of a bare name). Falls back to deriving a name from a pre-this-fix
+-- saved `exportFolder` value if `exportFolderName` is missing (an older saved
+-- config that predates this split).
+function utils.resolveExportFolder(cfg)
+    local name = cfg.exportFolderName or stripDataFilesPrefix(cfg.exportFolder or "Export Cells")
+    cfg.exportFolder = "data files\\" .. stripDataFilesPrefix(name)
+end
+
 
 -- Check if a cell is populated (has references, landscape, pathgrid, or region)
 function utils.isCellPopulated(x, y)

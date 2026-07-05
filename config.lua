@@ -4,7 +4,10 @@ local config = {
     -- GENERAL
     -- =============================================================================
 
-    exportFolder = "data files\\Export Cells",
+    -- Bare folder name edited via MCM -- never contains a "data files\" prefix.
+    -- `exportFolder` (the fully resolved path every export module actually reads)
+    -- is computed from this by `utils.resolveExportFolder`, not stored here.
+    exportFolderName = "Export Cells",
     useSavedConfig = false,
 
     teleportDelaySeconds = 0.02,
