@@ -485,7 +485,7 @@ function jsons.export(regionCells, currentIndex, totalCount)
 
     local function jsonColor(c)
         if not c then return "null" end
-        return string.format("[%s, %s, %s]", jsonNumber(c.r), jsonNumber(c.g), jsonNumber(c.b))
+        return string.format("[%s, %s, %s]", jsonNumber(c.r / 255), jsonNumber(c.g / 255), jsonNumber(c.b / 255))
     end
 
     local rootLines = {
